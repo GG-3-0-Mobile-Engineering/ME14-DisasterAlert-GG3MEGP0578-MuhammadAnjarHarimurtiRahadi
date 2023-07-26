@@ -9,13 +9,16 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.viewModels
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.remote.response.GeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
+import com.example.disasteralert.helper.Constant
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -55,6 +58,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         getDisasterData(viewModel)
+
+        setFilterList()
+
+        binding.svSearchLocation.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
+            android.widget.SearchView.OnQueryTextListener {
+            override fun onQueryTextSubmit(query: String): Boolean {
+                return false
+            }
+
+            override fun onQueryTextChange(newText: String): Boolean {
+                return false
+            }
+        })
     }
 
     override fun onDestroy() {
@@ -123,6 +139,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             markerOptions.title("$position")
             mMap.addMarker(markerOptions)
         }
+    }
+
+    private fun setFilterList() {
+        val adapter = FilterAdapter(Constant.FILTER_TYPE)
+        binding.rvFilter.layoutManager = LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
+        binding.rvFilter.adapter = adapter
     }
 
     override fun onMarkerClick(p0: Marker): Boolean = false
