@@ -35,7 +35,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val pref = SettingPreferences.getInstance(requireContext().dataStore)
+        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
 
         val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
         val viewModel: SettingsViewModel by viewModels { factory }

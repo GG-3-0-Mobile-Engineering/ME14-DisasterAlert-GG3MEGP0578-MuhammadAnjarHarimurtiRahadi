@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/cv_filter_item"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     xmlns:tools="http://schemas.android.com/tools"
@@ -8,18 +9,17 @@
     android:layout_margin="@dimen/dimen_4dp">
 
     <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/cv_filter_item"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content">
 
         <ImageView
-            android:id="@+id/imageView"
+            android:id="@+id/iv_filter_status"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/baseline_add_24"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"/>
 
         <TextView
             android:id="@+id/tv_filter_name"
@@ -28,7 +28,7 @@
             android:padding="@dimen/dimen_8dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/imageView"
+            app:layout_constraintStart_toEndOf="@+id/iv_filter_status"
             app:layout_constraintTop_toTopOf="parent"
             tools:text="@string/filter_item_dummy" />
     </androidx.constraintlayout.widget.ConstraintLayout>

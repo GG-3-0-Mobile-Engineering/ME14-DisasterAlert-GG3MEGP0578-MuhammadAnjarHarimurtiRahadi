@@ -1,6 +1,7 @@
 package com.example.disasteralert.ui.home
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
@@ -13,6 +14,10 @@ import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStore
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
@@ -23,6 +28,7 @@ import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.remote.response.GeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
+import com.example.disasteralert.helper.SettingPreferences
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -46,6 +52,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private lateinit var lastPinLocation: LatLng
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    private var latestFilter: String = ""
+
+    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
@@ -56,7 +66,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), null)
+        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
+        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
         val viewModel: HomeViewModel by viewModels { factory }
 
         mapFragment =
@@ -66,9 +77,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         getDisasterData(viewModel)
-
         setFilterList(viewModel)
-
         setSearchLayout(viewModel)
 
         binding.btnSettings.setOnClickListener {
@@ -97,7 +106,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
                     getDisasterData(viewModel)
-                } else if (newText.length >= 3){
+                } else if (newText.length >= 3) {
                     binding.cvSuggestion.visibility = View.VISIBLE
 
                     listAdapter.filter.filter(newText)
@@ -209,13 +218,45 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun setFilterList(viewModel: HomeViewModel) {
-        val adapter =
-            FilterAdapter(Constant.FILTER_TYPE, onDisasterFilterClick = { disasterFilter ->
-                getDisasterData(viewModel, disasterFilter = disasterFilter)
-            })
-        binding.rvFilter.layoutManager =
-            LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
-        binding.rvFilter.adapter = adapter
+        val filterAdapter =
+            FilterAdapter(
+                onDisasterFilterClick = { disasterFilter ->
+                    if (latestFilter == disasterFilter) {
+                        viewModel.saveLatestFilter("")
+                        getDisasterData(viewModel)
+                    } else {
+                        viewModel.saveLatestFilter(disasterFilter)
+                        getDisasterData(viewModel, disasterFilter = disasterFilter)
+                    }
+                },
+                onDisasterDrawable = { disasterFilter, ivFilterStatus ->
+                    viewModel.getLatestFilter().observe(this) { latestFilter ->
+                        this.latestFilter = latestFilter
+                        if (disasterFilter == latestFilter) {
+                            ivFilterStatus.setImageDrawable(
+                                ContextCompat.getDrawable(
+                                    ivFilterStatus.context,
+                                    R.drawable.baseline_remove_24
+                                )
+                            )
+                        } else {
+                            ivFilterStatus.setImageDrawable(
+                                ContextCompat.getDrawable(
+                                    ivFilterStatus.context,
+                                    R.drawable.baseline_add_24
+                                )
+                            )
+                        }
+                    }
+                }
+            )
+        filterAdapter.submitList(Constant.FILTER_TYPE)
+        binding.rvFilter.apply {
+            layoutManager =
+                LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
+            setHasFixedSize(true)
+            adapter = filterAdapter
+        }
     }
 
     override fun onMarkerClick(p0: Marker): Boolean = false
