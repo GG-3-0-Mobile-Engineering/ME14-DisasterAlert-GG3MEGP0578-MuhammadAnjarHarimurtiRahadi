@@ -38,6 +38,9 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.shape.CornerFamily
+import com.google.android.material.shape.CornerSize
+import com.google.android.material.shape.ShapeAppearanceModel
 
 
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
@@ -79,6 +82,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         getDisasterData(viewModel)
         setFilterList(viewModel)
         setSearchLayout(viewModel)
+        modifyBottomSheet()
 
         binding.btnSettings.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
@@ -96,8 +100,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             android.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
                 binding.cvSuggestion.visibility = View.GONE
-                val areaKey =
-                    Constant.AREA.entries.find { it.value == query }?.key.toString()
+                val areaKey = Constant.AREA.entries.find { it.value == query }?.key.toString()
                 getDisasterData(viewModel, areaKey)
                 return false
             }
@@ -150,7 +153,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         rlp.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
         rlp.addRule(RelativeLayout.ALIGN_END, 0);
         rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-        rlp.setMargins(30, 0, 0, 40);
+        rlp.setMargins(30, 0, 0, 75);
+
+        googleMap.setPadding(0, 0, 0, 150)
 
         setUpMap()
     }
@@ -178,18 +183,34 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun getDisasterData(
         viewModel: HomeViewModel, locFilter: String = "", disasterFilter: String = ""
     ) {
+        val disasterAdapter = DisasterAdapter()
+        var disasterData: List<GeometriesItem>
         viewModel.getAllDisasterData(locFilter, disasterFilter)
             .observe(viewLifecycleOwner) { disaster ->
                 if (disaster != null) {
                     when (disaster) {
                         is Results.Loading -> {
-//                        binding.progressBar.visibility = View.VISIBLE
+                            showLoading(true)
                         }
                         is Results.Success -> {
-//                        binding.progressBar.visibility = View.GONE
-                            val disasterData = disaster.data.result
+                            showLoading(false)
+                            disasterData = disaster.data.result.objects.output.geometries
+                            disasterAdapter.submitList(disasterData)
+
+                            binding.bottomSheetSection.rvDisasterList.apply {
+                                layoutManager = LinearLayoutManager(context)
+                                setHasFixedSize(true)
+                                adapter = disasterAdapter
+                                visibility = if (disasterData.isEmpty()) View.GONE else View.VISIBLE
+                            }
+
+                            if (disasterData.isEmpty())
+                                Toast.makeText(
+                                    requireActivity(), "There is no data", Toast.LENGTH_SHORT
+                                ).show()
+
                             mMap.clear()
-                            placeMarkerOnMap(disasterData.objects.output.geometries)
+                            placeMarkerOnMap(disasterData)
                             if (locFilter.isNotEmpty() || disasterFilter.isNotEmpty()) mMap.animateCamera(
                                 CameraUpdateFactory.newLatLngZoom(
                                     lastPinLocation, 12f
@@ -197,7 +218,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             )
                         }
                         is Results.Error -> {
-//                        binding.progressBar.visibility = View.GONE
+                            showLoading(false)
                             Toast.makeText(
                                 requireActivity(), disaster.error, Toast.LENGTH_SHORT
                             ).show()
@@ -205,6 +226,22 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     }
                 }
             }
+    }
+
+    private fun showLoading(isLoading: Boolean) {
+        if (isLoading) {
+            binding.bottomSheetSection.apply {
+                progressBar.visibility = View.VISIBLE
+                rvDisasterList.visibility = View.INVISIBLE
+                tvNoData.visibility = View.GONE
+            }
+
+        } else {
+            binding.bottomSheetSection.apply {
+                progressBar.visibility = View.GONE
+                tvNoData.visibility = View.VISIBLE
+            }
+        }
     }
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
@@ -218,38 +255,32 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun setFilterList(viewModel: HomeViewModel) {
-        val filterAdapter =
-            FilterAdapter(
-                onDisasterFilterClick = { disasterFilter ->
-                    if (latestFilter == disasterFilter) {
-                        viewModel.saveLatestFilter("")
-                        getDisasterData(viewModel)
-                    } else {
-                        viewModel.saveLatestFilter(disasterFilter)
-                        getDisasterData(viewModel, disasterFilter = disasterFilter)
-                    }
-                },
-                onDisasterDrawable = { disasterFilter, ivFilterStatus ->
-                    viewModel.getLatestFilter().observe(this) { latestFilter ->
-                        this.latestFilter = latestFilter
-                        if (disasterFilter == latestFilter) {
-                            ivFilterStatus.setImageDrawable(
-                                ContextCompat.getDrawable(
-                                    ivFilterStatus.context,
-                                    R.drawable.baseline_remove_24
-                                )
-                            )
-                        } else {
-                            ivFilterStatus.setImageDrawable(
-                                ContextCompat.getDrawable(
-                                    ivFilterStatus.context,
-                                    R.drawable.baseline_add_24
-                                )
-                            )
-                        }
-                    }
+        val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
+            if (latestFilter == disasterFilter) {
+                viewModel.saveLatestFilter("")
+                getDisasterData(viewModel)
+            } else {
+                viewModel.saveLatestFilter(disasterFilter)
+                getDisasterData(viewModel, disasterFilter = disasterFilter)
+            }
+        }, onDisasterDrawable = { disasterFilter, ivFilterStatus ->
+            viewModel.getLatestFilter().observe(this) { latestFilter ->
+                this.latestFilter = latestFilter
+                if (disasterFilter == latestFilter) {
+                    ivFilterStatus.setImageDrawable(
+                        ContextCompat.getDrawable(
+                            ivFilterStatus.context, R.drawable.baseline_remove_24
+                        )
+                    )
+                } else {
+                    ivFilterStatus.setImageDrawable(
+                        ContextCompat.getDrawable(
+                            ivFilterStatus.context, R.drawable.baseline_add_24
+                        )
+                    )
                 }
-            )
+            }
+        })
         filterAdapter.submitList(Constant.FILTER_TYPE)
         binding.rvFilter.apply {
             layoutManager =
@@ -257,6 +288,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             setHasFixedSize(true)
             adapter = filterAdapter
         }
+    }
+
+    private fun modifyBottomSheet() {
+        val shapeAppearanceModel = ShapeAppearanceModel().toBuilder()
+        shapeAppearanceModel.setTopLeftCorner(CornerFamily.ROUNDED,
+            CornerSize { return@CornerSize 48F })
+
+        shapeAppearanceModel.setTopRightCorner(CornerFamily.ROUNDED,
+            CornerSize { return@CornerSize 48F })
+
+        binding.bottomSheetSection.mcvBottomSheet.shapeAppearanceModel =
+            shapeAppearanceModel.build()
     }
 
     override fun onMarkerClick(p0: Marker): Boolean = false

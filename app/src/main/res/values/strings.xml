@@ -5,4 +5,7 @@
     <string name="filter_item_dummy">Flood</string>
     <string name="dark_mode">Dark Mode</string>
     <string name="search_hint">Enter province name</string>
+    <string name="bottom_sheet_title">Informasi Bencana Terkini</string>
+    <string name="disaster_time_dummy">2016-12-09</string>
+    <string name="no_data">There is no data</string>
 </resources>

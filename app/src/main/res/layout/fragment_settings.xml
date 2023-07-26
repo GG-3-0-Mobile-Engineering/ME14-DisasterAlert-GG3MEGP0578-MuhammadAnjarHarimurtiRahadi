@@ -13,8 +13,9 @@
         android:layout_height="wrap_content"
         android:text="@string/dark_mode"
         android:textSize="18sp"
+        app:layout_constraintBottom_toBottomOf="@+id/switch_theme"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="@+id/switch_theme" />
 
     <com.google.android.material.switchmaterial.SwitchMaterial
         android:id="@+id/switch_theme"
