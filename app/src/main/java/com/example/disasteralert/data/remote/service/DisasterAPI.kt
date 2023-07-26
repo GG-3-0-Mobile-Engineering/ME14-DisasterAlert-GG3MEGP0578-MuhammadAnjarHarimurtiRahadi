@@ -18,7 +18,7 @@ interface DisasterAPI {
     ): DisasterResponse
 
     @GET("reports")
-    suspend fun getDisasterAlertByFilter(
+    suspend fun getDisasterDataByFilter(
         @Query("disaster") disasterFilter: String
-    ): Call<DisasterResponse>
+    ): DisasterResponse
 }

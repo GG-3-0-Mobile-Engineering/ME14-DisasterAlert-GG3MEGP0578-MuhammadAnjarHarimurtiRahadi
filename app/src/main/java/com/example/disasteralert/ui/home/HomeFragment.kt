@@ -66,7 +66,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         getDisasterData(viewModel)
 
-        setFilterList()
+        setFilterList(viewModel)
 
         setSearchLayout(viewModel)
     }
@@ -153,33 +153,36 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun getDisasterData(viewModel: HomeViewModel, filter: String = "") {
-        viewModel.getAllDisasterData(filter).observe(viewLifecycleOwner) { disaster ->
-            if (disaster != null) {
-                when (disaster) {
-                    is Results.Loading -> {
+    private fun getDisasterData(
+        viewModel: HomeViewModel, locFilter: String = "", disasterFilter: String = ""
+    ) {
+        viewModel.getAllDisasterData(locFilter, disasterFilter)
+            .observe(viewLifecycleOwner) { disaster ->
+                if (disaster != null) {
+                    when (disaster) {
+                        is Results.Loading -> {
 //                        binding.progressBar.visibility = View.VISIBLE
-                    }
-                    is Results.Success -> {
+                        }
+                        is Results.Success -> {
 //                        binding.progressBar.visibility = View.GONE
-                        val disasterData = disaster.data.result
-                        mMap.clear()
-                        placeMarkerOnMap(disasterData.objects.output.geometries)
-                        if (filter.isNotEmpty()) mMap.animateCamera(
-                            CameraUpdateFactory.newLatLngZoom(
-                                lastPinLocation, 12f
+                            val disasterData = disaster.data.result
+                            mMap.clear()
+                            placeMarkerOnMap(disasterData.objects.output.geometries)
+                            if (locFilter.isNotEmpty() || disasterFilter.isNotEmpty()) mMap.animateCamera(
+                                CameraUpdateFactory.newLatLngZoom(
+                                    lastPinLocation, 12f
+                                )
                             )
-                        )
-                    }
-                    is Results.Error -> {
+                        }
+                        is Results.Error -> {
 //                        binding.progressBar.visibility = View.GONE
-                        Toast.makeText(
-                            requireActivity(), disaster.error, Toast.LENGTH_SHORT
-                        ).show()
+                            Toast.makeText(
+                                requireActivity(), disaster.error, Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     }
                 }
             }
-        }
     }
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
@@ -192,8 +195,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun setFilterList() {
-        val adapter = FilterAdapter(Constant.FILTER_TYPE)
+    private fun setFilterList(viewModel: HomeViewModel) {
+        val adapter =
+            FilterAdapter(Constant.FILTER_TYPE, onDisasterFilterClick = { disasterFilter ->
+                getDisasterData(viewModel, disasterFilter = disasterFilter)
+            })
         binding.rvFilter.layoutManager =
             LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
         binding.rvFilter.adapter = adapter

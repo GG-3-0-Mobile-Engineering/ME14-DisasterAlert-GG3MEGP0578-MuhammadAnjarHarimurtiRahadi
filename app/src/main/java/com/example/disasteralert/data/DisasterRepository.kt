@@ -10,18 +10,22 @@ class DisasterRepository private constructor(
     private val apiService: DisasterAPI,
 ) {
 
-    fun getAllDisasterData(filter: String): LiveData<Results<DisasterResponse>> = liveData {
+    fun getAllDisasterData(
+        locFilter: String, disasterFilter: String
+    ): LiveData<Results<DisasterResponse>> = liveData {
         emit(Results.Loading)
         try {
-            if (filter.isBlank()) {
+            if (locFilter.isBlank() && disasterFilter.isBlank()) {
                 val response = apiService.getAllDisasterData()
                 emit(Results.Success(response))
-            }
-            else {
+            } else if (locFilter.isNotBlank()) {
                 val response = apiService.getDisasterDataByLocation(
-                    start = Util.getStartDate(),
-                    end = Util.getEndDate(),
-                    location = filter
+                    start = Util.getStartDate(), end = Util.getEndDate(), location = locFilter
+                )
+                emit(Results.Success(response))
+            } else if (disasterFilter.isNotBlank()) {
+                val response = apiService.getDisasterDataByFilter(
+                    disasterFilter = disasterFilter.lowercase()
                 )
                 emit(Results.Success(response))
             }

@@ -5,15 +5,21 @@ import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 import com.example.disasteralert.databinding.FilterItemBinding
 
-class FilterAdapter(private val filterList: List<String>) : RecyclerView.Adapter<FilterAdapter.ViewHolder>() {
+class FilterAdapter(
+    private val filterList: List<String>, private val onDisasterFilterClick: (String) -> Unit
+) : RecyclerView.Adapter<FilterAdapter.ViewHolder>() {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FilterAdapter.ViewHolder {
         val binding = FilterItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
         return ViewHolder(binding)
     }
 
     override fun onBindViewHolder(holder: FilterAdapter.ViewHolder, position: Int) {
-        val filterItem = filterList.get(position)
+        val filterItem = filterList[position]
         holder.bind(filterItem)
+
+        holder.binding.cvFilterItem.setOnClickListener {
+            onDisasterFilterClick(filterItem)
+        }
     }
 
     override fun getItemCount(): Int = filterList.size
