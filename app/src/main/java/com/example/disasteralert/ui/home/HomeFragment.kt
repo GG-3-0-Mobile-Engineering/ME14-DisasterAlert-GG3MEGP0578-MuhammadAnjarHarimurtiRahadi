@@ -15,6 +15,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
@@ -55,7 +56,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity())
+        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), null)
         val viewModel: HomeViewModel by viewModels { factory }
 
         mapFragment =
@@ -69,6 +70,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         setFilterList(viewModel)
 
         setSearchLayout(viewModel)
+
+        binding.btnSettings.setOnClickListener {
+            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
+        }
     }
 
     private fun setSearchLayout(viewModel: HomeViewModel) {
