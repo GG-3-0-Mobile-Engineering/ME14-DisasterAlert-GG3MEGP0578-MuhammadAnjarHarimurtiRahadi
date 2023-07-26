@@ -5,5 +5,5 @@ import com.example.disasteralert.data.DisasterRepository
 
 class HomeViewModel(private val disasterRepository: DisasterRepository): ViewModel() {
 
-    fun getAllDisasterData() = disasterRepository.getAllDisasterData()
+    fun getAllDisasterData(filter: String) = disasterRepository.getAllDisasterData(filter)
 }

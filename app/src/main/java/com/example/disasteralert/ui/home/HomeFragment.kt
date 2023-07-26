@@ -4,13 +4,16 @@ import android.Manifest
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.AdapterView
+import android.widget.ArrayAdapter
+import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
+import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
@@ -29,17 +32,21 @@ import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 
+
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private var _binding: FragmentHomeBinding? = null
     private val binding get() = _binding!!
+
     private lateinit var mMap: GoogleMap
+    private lateinit var mapFragment: SupportMapFragment
+
     private lateinit var lastLocation: Location
+    private lateinit var lastPinLocation: LatLng
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     override fun onCreateView(
-        inflater: LayoutInflater, container: ViewGroup?,
-        savedInstanceState: Bundle?
+        inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
     ): View {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         return binding.root
@@ -51,7 +58,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity())
         val viewModel: HomeViewModel by viewModels { factory }
 
-        val mapFragment: SupportMapFragment =
+        mapFragment =
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
@@ -61,6 +68,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         setFilterList()
 
+        setSearchLayout(viewModel)
+    }
+
+    private fun setSearchLayout(viewModel: HomeViewModel) {
+        val suggestionArea = ArrayList(Constant.AREA.values)
+        val listAdapter = ArrayAdapter(
+            requireActivity(), android.R.layout.simple_list_item_1, suggestionArea
+        )
+        binding.lvSuggestion.adapter = listAdapter
+
         binding.svSearchLocation.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
             android.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
@@ -68,6 +85,20 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             }
 
             override fun onQueryTextChange(newText: String): Boolean {
+                if (newText.isEmpty()) binding.cvSuggestion.visibility = View.GONE
+                else binding.cvSuggestion.visibility = View.VISIBLE
+
+                listAdapter.filter.filter(newText)
+
+                binding.lvSuggestion.onItemClickListener =
+                    AdapterView.OnItemClickListener { adapterView, view, position, id ->
+                        val selectedItem = adapterView.getItemAtPosition(position) as String
+                        binding.svSearchLocation.setQuery(selectedItem, false)
+                        binding.cvSuggestion.visibility = View.GONE
+                        val areaKey =
+                            Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
+                        getDisasterData(viewModel, areaKey)
+                    }
                 return false
             }
         })
@@ -82,6 +113,23 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mMap = googleMap
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.setOnMarkerClickListener(this)
+
+        val locationButton =
+            (mapFragment.view?.findViewById<View>(Integer.parseInt("1"))?.parent as View).findViewById<View>(
+                Integer.parseInt("2")
+            )
+        val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
+
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
+        rlp.addRule(RelativeLayout.ALIGN_END, 0);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
+        rlp.setMargins(30, 0, 0, 40);
+
         setUpMap()
     }
 
@@ -91,9 +139,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             ActivityCompat.requestPermissions(
-                requireActivity(),
-                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
-                1
+                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1
             )
             return
         }
@@ -107,8 +153,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun getDisasterData(viewModel: HomeViewModel) {
-        viewModel.getAllDisasterData().observe(viewLifecycleOwner) { disaster ->
+    private fun getDisasterData(viewModel: HomeViewModel, filter: String = "") {
+        viewModel.getAllDisasterData(filter).observe(viewLifecycleOwner) { disaster ->
             if (disaster != null) {
                 when (disaster) {
                     is Results.Loading -> {
@@ -117,14 +163,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     is Results.Success -> {
 //                        binding.progressBar.visibility = View.GONE
                         val disasterData = disaster.data.result
+                        mMap.clear()
                         placeMarkerOnMap(disasterData.objects.output.geometries)
+                        if (filter.isNotEmpty()) mMap.animateCamera(
+                            CameraUpdateFactory.newLatLngZoom(
+                                lastPinLocation, 12f
+                            )
+                        )
                     }
                     is Results.Error -> {
 //                        binding.progressBar.visibility = View.GONE
                         Toast.makeText(
-                            requireActivity(),
-                            "Terjadi kesalahan" + disaster.error,
-                            Toast.LENGTH_SHORT
+                            requireActivity(), disaster.error, Toast.LENGTH_SHORT
                         ).show()
                     }
                 }
@@ -135,6 +185,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
         disasterData.forEach {
             val position = LatLng(it.coordinates[1] as Double, it.coordinates[0] as Double)
+            lastPinLocation = position
             val markerOptions = MarkerOptions().position(position)
             markerOptions.title("$position")
             mMap.addMarker(markerOptions)
@@ -143,7 +194,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun setFilterList() {
         val adapter = FilterAdapter(Constant.FILTER_TYPE)
-        binding.rvFilter.layoutManager = LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
+        binding.rvFilter.layoutManager =
+            LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
         binding.rvFilter.adapter = adapter
     }
 
