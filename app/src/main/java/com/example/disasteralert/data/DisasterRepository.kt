@@ -20,7 +20,7 @@ class DisasterRepository private constructor(
                 emit(Results.Success(response))
             } else if (locFilter.isNotBlank()) {
                 val response = apiService.getDisasterDataByLocation(
-                    start = Util.getStartDate(), end = Util.getEndDate(), location = locFilter
+                    location = locFilter
                 )
                 emit(Results.Success(response))
             } else if (disasterFilter.isNotBlank()) {

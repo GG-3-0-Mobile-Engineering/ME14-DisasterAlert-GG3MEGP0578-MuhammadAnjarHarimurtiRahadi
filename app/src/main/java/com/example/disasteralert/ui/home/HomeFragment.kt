@@ -86,24 +86,32 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         binding.svSearchLocation.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
             android.widget.SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String): Boolean {
+                binding.cvSuggestion.visibility = View.GONE
+                val areaKey =
+                    Constant.AREA.entries.find { it.value == query }?.key.toString()
+                getDisasterData(viewModel, areaKey)
                 return false
             }
 
             override fun onQueryTextChange(newText: String): Boolean {
-                if (newText.isEmpty()) binding.cvSuggestion.visibility = View.GONE
-                else binding.cvSuggestion.visibility = View.VISIBLE
+                if (newText.isEmpty()) {
+                    binding.cvSuggestion.visibility = View.GONE
+                    getDisasterData(viewModel)
+                } else if (newText.length >= 3){
+                    binding.cvSuggestion.visibility = View.VISIBLE
 
-                listAdapter.filter.filter(newText)
+                    listAdapter.filter.filter(newText)
 
-                binding.lvSuggestion.onItemClickListener =
-                    AdapterView.OnItemClickListener { adapterView, view, position, id ->
-                        val selectedItem = adapterView.getItemAtPosition(position) as String
-                        binding.svSearchLocation.setQuery(selectedItem, false)
-                        binding.cvSuggestion.visibility = View.GONE
-                        val areaKey =
-                            Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
-                        getDisasterData(viewModel, areaKey)
-                    }
+                    binding.lvSuggestion.onItemClickListener =
+                        AdapterView.OnItemClickListener { adapterView, view, position, id ->
+                            val selectedItem = adapterView.getItemAtPosition(position) as String
+                            binding.svSearchLocation.setQuery(selectedItem, false)
+                            binding.cvSuggestion.visibility = View.GONE
+                            val areaKey =
+                                Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
+                            getDisasterData(viewModel, areaKey)
+                        }
+                }
                 return false
             }
         })

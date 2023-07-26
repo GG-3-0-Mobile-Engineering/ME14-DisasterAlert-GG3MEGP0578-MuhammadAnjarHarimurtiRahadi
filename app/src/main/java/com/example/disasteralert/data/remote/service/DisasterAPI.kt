@@ -10,10 +10,8 @@ interface DisasterAPI {
     @GET("reports")
     suspend fun getAllDisasterData(): DisasterResponse
 
-    @GET("reports/archive?")
+    @GET("reports")
     suspend fun getDisasterDataByLocation(
-        @Query("start") start: String,
-        @Query("end") end: String,
         @Query("admin") location: String
     ): DisasterResponse
 
