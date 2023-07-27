@@ -15,6 +15,12 @@ import androidx.navigation.ui.setupActionBarWithNavController
 import com.example.disasteralert.databinding.ActivityMainBinding
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.ui.settings.SettingsViewModel
+import com.facebook.flipper.android.AndroidFlipperClient
+import com.facebook.flipper.plugins.crashreporter.CrashReporterPlugin
+import com.facebook.flipper.plugins.inspector.DescriptorMapping
+import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin
+import com.facebook.flipper.plugins.network.NetworkFlipperPlugin
+import com.facebook.soloader.SoLoader
 
 class MainActivity : AppCompatActivity() {
 
@@ -39,6 +45,9 @@ class MainActivity : AppCompatActivity() {
         navController = navHostFragment.findNavController()
 
         setupActionBarWithNavController(navController)
+
+        if (BuildConfig.DEBUG)
+            initFlipper()
     }
 
     private fun checkTheme(viewModel: SettingsViewModel) {
@@ -51,7 +60,27 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun initFlipper() {
+        SoLoader.init(this, false)
+
+        val client = AndroidFlipperClient.getInstance(this.applicationContext).apply {
+            addPlugin(
+                InspectorFlipperPlugin(
+                    applicationContext,
+                    DescriptorMapping.withDefaults()
+                )
+            )
+            addPlugin(CrashReporterPlugin.getInstance())
+            addPlugin(networkFlipperPlugin)
+        }
+        client.start()
+    }
+
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
+    }
+
+    companion object {
+        val networkFlipperPlugin = NetworkFlipperPlugin()
     }
 }
