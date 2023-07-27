@@ -16,6 +16,8 @@ class HomeViewModel(
         locFilter: String, disasterFilter: String, startDate: String, endDate: String
     ) = disasterRepository.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
 
+    fun getFloodGaugesData() = disasterRepository.getFloodGaugesData()
+
     fun getLatestFilter(): LiveData<String> {
         return pref.getLatestFilter().asLiveData()
     }

@@ -4,6 +4,7 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,6 +14,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -23,12 +25,14 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.work.*
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
+import com.example.disasteralert.helper.MyWorker
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
 import com.google.android.gms.location.FusedLocationProviderClient
@@ -45,6 +49,7 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
+import java.util.concurrent.TimeUnit
 
 
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
@@ -66,6 +71,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private lateinit var homeViewModel: HomeViewModel
 
+    private lateinit var workManager: WorkManager
+    private lateinit var periodicWorkRequest: PeriodicWorkRequest
+
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
     override fun onCreateView(
@@ -84,8 +92,14 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         val pref = SettingPreferences.getInstance(requireActivity().dataStore)
-        val viewModel: HomeViewModel by viewModels { ViewModelFactory.getInstance(requireActivity(), pref) }
+        val viewModel: HomeViewModel by viewModels {
+            ViewModelFactory.getInstance(
+                requireActivity(), pref
+            )
+        }
         homeViewModel = viewModel
+
+        workManager = WorkManager.getInstance(requireActivity())
         init()
 
         binding.btnSettings.setOnClickListener {
@@ -94,11 +108,13 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun init() {
+        requestPermission()
         setBottomSheet()
         getDisasterData()
         setFilterList()
         setSearchLayout()
         modifyBottomSheet()
+        startPeriodicTask()
 
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String, province: String) {
@@ -116,11 +132,85 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
+    private fun requestPermission() {
+        val requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Toast.makeText(
+                    requireActivity(), "Notifications permission granted", Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    requireActivity(), "Notifications permission rejected", Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        if (ActivityCompat.checkSelfPermission(
+                requireActivity(), Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1
+            )
+            return
+        }
+    }
+
+    private fun startPeriodicTask() {
+        homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
+            if (floodGauges != null) {
+                when (floodGauges) {
+                    is Results.Loading -> {
+                        showLoading(true)
+                    }
+                    is Results.Success -> {
+                        showLoading(false)
+                        val floodGaugesData =
+                            floodGauges.data.floodGaugesResult.objects.output.geometries
+                        Log.d(
+                            "OBSERVATION: ", floodGaugesData[0].floodGaugesProperties.gaugenameid
+                        )
+
+                        if (floodGaugesData.isNotEmpty()) {
+                            val data = Data.Builder().putString(
+                                MyWorker.EXTRA_DATA,
+                                floodGaugesData[0].floodGaugesProperties.gaugenameid
+                            ).build()
+                            val constraints =
+                                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                                    .build()
+                            periodicWorkRequest = PeriodicWorkRequest.Builder(
+                                MyWorker::class.java, 60, TimeUnit.MINUTES
+                            ).setInputData(data).setConstraints(constraints).build()
+                            workManager.enqueue(periodicWorkRequest)
+                        }
+                    }
+                    is Results.Error -> {
+                        showLoading(false)
+                        Toast.makeText(
+                            requireActivity(), floodGauges.error, Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
     private fun checkTheme(viewModel: HomeViewModel) {
         viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
             this.isDarkModeActive = isDarkModeActive
             if (isDarkModeActive) {
-                mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireActivity(), R.raw.map_in_night));
+                mMap.setMapStyle(
+                    MapStyleOptions.loadRawResourceStyle(
+                        requireActivity(), R.raw.map_in_night
+                    )
+                )
             } else {
                 mMap.mapType = GoogleMap.MAP_TYPE_NORMAL
             }
@@ -145,12 +235,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun modifyBottomSheet() {
         val shapeAppearanceModel = ShapeAppearanceModel().toBuilder()
-        shapeAppearanceModel.setTopLeftCorner(
-            CornerFamily.ROUNDED,
+        shapeAppearanceModel.setTopLeftCorner(CornerFamily.ROUNDED,
             CornerSize { return@CornerSize 48F })
 
-        shapeAppearanceModel.setTopRightCorner(
-            CornerFamily.ROUNDED,
+        shapeAppearanceModel.setTopRightCorner(CornerFamily.ROUNDED,
             CornerSize { return@CornerSize 48F })
 
         binding.bottomSheetSection.mcvBottomSheet.shapeAppearanceModel =
@@ -177,6 +265,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
                     getDisasterData()
+                    startPeriodicTask()
                 } else if (newText.length >= 3) {
                     binding.cvSuggestion.visibility = View.VISIBLE
 
@@ -215,15 +304,15 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             )
         val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
 
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE);
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE);
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0);
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE)
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE)
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0)
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0)
 
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, 0);
-        rlp.addRule(RelativeLayout.ALIGN_END, 0);
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT);
-        rlp.setMargins(30, 0, 0, 75);
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, 0)
+        rlp.addRule(RelativeLayout.ALIGN_END, 0)
+        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT)
+        rlp.setMargins(30, 0, 0, 75)
 
         googleMap.setPadding(0, 0, 0, 150)
 
@@ -233,11 +322,10 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun setUpMap() {
         if (ActivityCompat.checkSelfPermission(
                 requireActivity(), Manifest.permission.ACCESS_FINE_LOCATION
+            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
+                requireActivity(), Manifest.permission.ACCESS_COARSE_LOCATION
             ) != PackageManager.PERMISSION_GRANTED
         ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1
-            )
             return
         }
         mMap.isMyLocationEnabled = true
@@ -332,8 +420,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
         disasterData.forEach { disasterItem ->
-            val position =
-                Util.getLatLngFormat(disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double)
+            val position = Util.getLatLngFormat(
+                disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
+            )
             lastPinLocation = position
             val markerOptions = MarkerOptions().position(position)
             val areaCode = disasterItem.properties.tags.instanceRegionCode

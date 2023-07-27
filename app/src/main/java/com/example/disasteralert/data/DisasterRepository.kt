@@ -3,6 +3,7 @@ package com.example.disasteralert.data
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import com.example.disasteralert.data.remote.response.disasterresponse.DisasterResponse
+import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesResponse
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.helper.Util
 
@@ -32,10 +33,21 @@ class DisasterRepository private constructor(
                     location = locFilter
                 )
                 emit(Results.Success(response))
-            } else  {
+            } else {
                 val response = apiService.getAllDisasterData()
                 emit(Results.Success(response))
             }
+
+        } catch (e: Exception) {
+            emit(Results.Error(e.message.toString()))
+        }
+    }
+
+    fun getFloodGaugesData(): LiveData<Results<FloodGaugesResponse>> = liveData {
+        emit(Results.Loading)
+        try {
+            val response = apiService.getFloodGaugesData()
+            emit(Results.Success(response))
 
         } catch (e: Exception) {
             emit(Results.Error(e.message.toString()))
