@@ -40,7 +40,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/textView2"
-            tools:text="@string/start_date_title"
+            android:text="@string/start_date_title"
             android:layout_marginTop="@dimen/dimen_24dp"/>
 
         <ImageButton
@@ -58,7 +58,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/btn_start_date"
-            tools:text="@string/end_date_title"
+            android:text="@string/end_date_title"
             android:layout_marginTop="@dimen/dimen_8dp"/>
 
         <TextView

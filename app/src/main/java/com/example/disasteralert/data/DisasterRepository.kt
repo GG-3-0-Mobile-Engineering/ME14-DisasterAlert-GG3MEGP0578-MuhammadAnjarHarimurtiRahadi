@@ -15,8 +15,15 @@ class DisasterRepository private constructor(
     ): LiveData<Results<DisasterResponse>> = liveData {
         emit(Results.Loading)
         try {
-            if (locFilter.isBlank() && disasterFilter.isBlank() && startDate.isBlank() && endDate.isBlank()) {
-                val response = apiService.getAllDisasterData()
+            if (disasterFilter.isNotBlank()) {
+                val response = apiService.getDisasterDataByFilter(
+                    disasterFilter = disasterFilter.lowercase()
+                )
+                emit(Results.Success(response))
+            } else if (locFilter.isNotBlank() && startDate.isEmpty()) {
+                val response = apiService.getDisasterDataByLocation(
+                    location = locFilter
+                )
                 emit(Results.Success(response))
             } else if (locFilter.isNotBlank() || (startDate.isNotBlank() && endDate.isNotBlank())) {
                 val response = apiService.getDisasterDataByPeriod(
@@ -25,15 +32,8 @@ class DisasterRepository private constructor(
                     location = locFilter
                 )
                 emit(Results.Success(response))
-            } else if (locFilter.isNotBlank()) {
-                val response = apiService.getDisasterDataByLocation(
-                    location = locFilter
-                )
-                emit(Results.Success(response))
-            } else if (disasterFilter.isNotBlank()) {
-                val response = apiService.getDisasterDataByFilter(
-                    disasterFilter = disasterFilter.lowercase()
-                )
+            } else  {
+                val response = apiService.getAllDisasterData()
                 emit(Results.Success(response))
             }
 

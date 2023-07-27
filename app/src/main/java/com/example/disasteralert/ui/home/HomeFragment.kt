@@ -66,6 +66,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private var latestFilter: String = ""
     private var isDarkModeActive: Boolean = false
 
+    private lateinit var homeViewModel: HomeViewModel
+
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
     override fun onCreateView(
@@ -78,36 +80,34 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
-        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
-        val viewModel: HomeViewModel by viewModels { factory }
+        mapFragment =
+            childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
+        mapFragment.getMapAsync(this)
+        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
-        init(viewModel)
+        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
+        val viewModel: HomeViewModel by viewModels { ViewModelFactory.getInstance(requireActivity(), pref) }
+        homeViewModel = viewModel
+        init()
 
         binding.btnSettings.setOnClickListener {
             findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
         }
     }
 
-    private fun init(viewModel: HomeViewModel) {
-        mapFragment =
-            childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
-        mapFragment.getMapAsync(this)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
-
-        checkTheme(viewModel)
+    private fun init() {
         setBottomSheet()
-        getDisasterData(viewModel)
-        setFilterList(viewModel)
-        setSearchLayout(viewModel)
+        getDisasterData()
+        setFilterList()
+        setSearchLayout()
         modifyBottomSheet()
 
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String, province: String) {
                 if (startDate.isNotEmpty() || endDate.isNotEmpty()) getDisasterData(
-                    viewModel, locFilter = province, startDate = startDate, endDate = endDate
+                    locFilter = province, startDate = startDate, endDate = endDate
                 )
-                else getDisasterData(viewModel, locFilter = province)
+                else getDisasterData(locFilter = province)
             }
         }
 
@@ -121,6 +121,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun checkTheme(viewModel: HomeViewModel) {
         viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
             this.isDarkModeActive = isDarkModeActive
+            if (isDarkModeActive) {
+                mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireActivity(), R.raw.map_in_night));
+            } else {
+                mMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+            }
         }
     }
 
@@ -154,7 +159,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             shapeAppearanceModel.build()
     }
 
-    private fun setSearchLayout(viewModel: HomeViewModel) {
+    private fun setSearchLayout() {
         val suggestionArea = ArrayList(Constant.AREA.values)
         val listAdapter = ArrayAdapter(
             requireActivity(), android.R.layout.simple_list_item_1, suggestionArea
@@ -166,14 +171,14 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             override fun onQueryTextSubmit(query: String): Boolean {
                 binding.cvSuggestion.visibility = View.GONE
                 val areaKey = Constant.AREA.entries.find { it.value == query }?.key.toString()
-                getDisasterData(viewModel, areaKey)
+                getDisasterData(areaKey)
                 return false
             }
 
             override fun onQueryTextChange(newText: String): Boolean {
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
-                    getDisasterData(viewModel)
+                    getDisasterData()
                 } else if (newText.length >= 3) {
                     binding.cvSuggestion.visibility = View.VISIBLE
 
@@ -186,7 +191,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             binding.cvSuggestion.visibility = View.GONE
                             val areaKey =
                                 Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
-                            getDisasterData(viewModel, areaKey)
+                            getDisasterData(areaKey)
                         }
                 }
                 return false
@@ -204,11 +209,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.setOnMarkerClickListener(this)
 
-        if (isDarkModeActive) {
-            mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireActivity(), R.raw.map_in_night));
-        } else {
-            mMap.mapType = GoogleMap.MAP_TYPE_NORMAL
-        }
+        checkTheme(homeViewModel)
 
         val locationButton =
             (mapFragment.view?.findViewById<View>(Integer.parseInt("1"))?.parent as View).findViewById<View>(
@@ -252,7 +253,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun getDisasterData(
-        viewModel: HomeViewModel,
         locFilter: String = "",
         disasterFilter: String = "",
         startDate: String = "",
@@ -269,7 +269,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             )
         })
         var disasterData: List<GeometriesItem>
-        viewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
+        homeViewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
             .observe(viewLifecycleOwner) { disaster ->
                 if (disaster != null) {
                     when (disaster) {
@@ -333,27 +333,29 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
-        disasterData.forEach {
+        disasterData.forEach { disasterItem ->
             val position =
-                Util.getLatLngFormat(it.coordinates[1] as Double, it.coordinates[0] as Double)
+                Util.getLatLngFormat(disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double)
             lastPinLocation = position
             val markerOptions = MarkerOptions().position(position)
-            markerOptions.title("$position")
+            val areaCode = disasterItem.properties.tags.instanceRegionCode
+            val provinceName = Constant.AREA[areaCode]
+            markerOptions.title(provinceName)
             mMap.addMarker(markerOptions)
         }
     }
 
-    private fun setFilterList(viewModel: HomeViewModel) {
+    private fun setFilterList() {
         val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
             if (latestFilter == disasterFilter) {
-                viewModel.saveLatestFilter("")
-                getDisasterData(viewModel)
+                homeViewModel.saveLatestFilter("")
+                getDisasterData()
             } else {
-                viewModel.saveLatestFilter(disasterFilter)
-                getDisasterData(viewModel, disasterFilter = disasterFilter)
+                homeViewModel.saveLatestFilter(disasterFilter)
+                getDisasterData(disasterFilter = disasterFilter)
             }
         }, onDisasterDrawable = { disasterFilter, ivFilterStatus ->
-            viewModel.getLatestFilter().observe(this) { latestFilter ->
+            homeViewModel.getLatestFilter().observe(this) { latestFilter ->
                 this.latestFilter = latestFilter
                 if (disasterFilter == latestFilter) {
                     ivFilterStatus.setImageDrawable(
