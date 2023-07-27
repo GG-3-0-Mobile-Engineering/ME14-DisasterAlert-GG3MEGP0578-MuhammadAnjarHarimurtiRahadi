@@ -185,7 +185,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     binding.lvSuggestion.onItemClickListener =
                         AdapterView.OnItemClickListener { adapterView, view, position, id ->
                             val selectedItem = adapterView.getItemAtPosition(position) as String
-                            binding.svSearchLocation.setQuery(selectedItem, false)
+                            binding.svSearchLocation.setQuery(selectedItem, true)
                             binding.cvSuggestion.visibility = View.GONE
                             val areaKey =
                                 Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
@@ -352,6 +352,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 homeViewModel.saveLatestFilter(disasterFilter)
                 getDisasterData(disasterFilter = disasterFilter)
             }
+            binding.svSearchLocation.setQuery("", true)
         }, onDisasterDrawable = { disasterFilter, ivFilterStatus ->
             homeViewModel.getLatestFilter().observe(this) { latestFilter ->
                 this.latestFilter = latestFilter
