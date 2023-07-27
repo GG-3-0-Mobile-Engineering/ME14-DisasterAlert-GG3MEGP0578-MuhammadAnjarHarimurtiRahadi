@@ -8,4 +8,5 @@
     <string name="bottom_sheet_title">Informasi Bencana Terkini</string>
     <string name="disaster_time_dummy">2016-12-09</string>
     <string name="no_data">There is no data</string>
+    <string name="disaster_place_dummy">Jawa Tengah</string>
 </resources>

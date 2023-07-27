@@ -5,6 +5,8 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
+import android.util.DisplayMetrics
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +31,7 @@ import com.example.disasteralert.data.remote.response.GeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.SettingPreferences
+import com.example.disasteralert.helper.Util
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -38,6 +41,7 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -73,20 +77,53 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
         val viewModel: HomeViewModel by viewModels { factory }
 
+        init(viewModel)
+
+        binding.btnSettings.setOnClickListener {
+            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
+        }
+    }
+
+    private fun init(viewModel: HomeViewModel) {
         mapFragment =
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
-
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         getDisasterData(viewModel)
         setFilterList(viewModel)
         setSearchLayout(viewModel)
         modifyBottomSheet()
+        setBottomSheet()
+    }
 
-        binding.btnSettings.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
-        }
+    private fun setBottomSheet() {
+
+        val bottomSheet = binding.bottomSheetSection.mcvBottomSheet
+        val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
+        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+            override fun onStateChanged(bottomSheet: View, newState: Int) {}
+
+            override fun onSlide(bottomSheet: View, slideOffset: Float) {
+                Log.d("Peak",slideOffset.toString())
+                if (slideOffset in 0.3..0.7)
+                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+            }
+        })
+    }
+
+    private fun modifyBottomSheet() {
+        val shapeAppearanceModel = ShapeAppearanceModel().toBuilder()
+        shapeAppearanceModel.setTopLeftCorner(
+            CornerFamily.ROUNDED,
+            CornerSize { return@CornerSize 48F })
+
+        shapeAppearanceModel.setTopRightCorner(
+            CornerFamily.ROUNDED,
+            CornerSize { return@CornerSize 48F })
+
+        binding.bottomSheetSection.mcvBottomSheet.shapeAppearanceModel =
+            shapeAppearanceModel.build()
     }
 
     private fun setSearchLayout(viewModel: HomeViewModel) {
@@ -174,7 +211,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         fusedLocationClient.lastLocation.addOnSuccessListener { location ->
             if (location != null) {
                 lastLocation = location
-                val currentLatLong = LatLng(location.latitude, location.longitude)
+                val currentLatLong = Util.getLatLngFormat(location.latitude, location.longitude)
                 mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLong, 16f))
             }
         }
@@ -183,7 +220,16 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun getDisasterData(
         viewModel: HomeViewModel, locFilter: String = "", disasterFilter: String = ""
     ) {
-        val disasterAdapter = DisasterAdapter()
+        val disasterAdapter = DisasterAdapter(onDisasterItemClick = { disasterItem ->
+            val position = Util.getLatLngFormat(
+                disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
+            )
+            mMap.animateCamera(
+                CameraUpdateFactory.newLatLngZoom(
+                    position, 12f
+                )
+            )
+        })
         var disasterData: List<GeometriesItem>
         viewModel.getAllDisasterData(locFilter, disasterFilter)
             .observe(viewLifecycleOwner) { disaster ->
@@ -204,10 +250,15 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                                 visibility = if (disasterData.isEmpty()) View.GONE else View.VISIBLE
                             }
 
-                            if (disasterData.isEmpty())
+                            if (disasterData.isEmpty()) {
                                 Toast.makeText(
                                     requireActivity(), "There is no data", Toast.LENGTH_SHORT
                                 ).show()
+                                binding.bottomSheetSection.tvNoData.visibility = View.VISIBLE
+                            } else {
+                                binding.bottomSheetSection.tvNoData.visibility = View.GONE
+                            }
+
 
                             mMap.clear()
                             placeMarkerOnMap(disasterData)
@@ -246,7 +297,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
         disasterData.forEach {
-            val position = LatLng(it.coordinates[1] as Double, it.coordinates[0] as Double)
+            val position =
+                Util.getLatLngFormat(it.coordinates[1] as Double, it.coordinates[0] as Double)
             lastPinLocation = position
             val markerOptions = MarkerOptions().position(position)
             markerOptions.title("$position")
@@ -288,18 +340,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             setHasFixedSize(true)
             adapter = filterAdapter
         }
-    }
-
-    private fun modifyBottomSheet() {
-        val shapeAppearanceModel = ShapeAppearanceModel().toBuilder()
-        shapeAppearanceModel.setTopLeftCorner(CornerFamily.ROUNDED,
-            CornerSize { return@CornerSize 48F })
-
-        shapeAppearanceModel.setTopRightCorner(CornerFamily.ROUNDED,
-            CornerSize { return@CornerSize 48F })
-
-        binding.bottomSheetSection.mcvBottomSheet.shapeAppearanceModel =
-            shapeAppearanceModel.build()
     }
 
     override fun onMarkerClick(p0: Marker): Boolean = false

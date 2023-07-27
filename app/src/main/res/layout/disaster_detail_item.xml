@@ -2,6 +2,7 @@
 <androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:id="@+id/cv_disaster_item"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_margin="@dimen/dimen_12dp"
@@ -36,16 +37,24 @@
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/dimen_8dp"
                 android:layout_marginTop="@dimen/dimen_8dp"
-                android:text="@string/filter_item_dummy"
+                tools:text="@string/filter_item_dummy"
                 android:textSize="@dimen/dimen_18sp"
                 android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tv_disaster_place"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/dimen_8dp"
+                tools:text="@string/disaster_place_dummy"
+                android:textSize="@dimen/dimen_12sp"/>
 
             <TextView
                 android:id="@+id/tv_disaster_time"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginStart="@dimen/dimen_8dp"
-                android:text="@string/disaster_time_dummy"
+                tools:text="@string/disaster_time_dummy"
                 android:textSize="@dimen/dimen_12sp"/>
         </LinearLayout>
 

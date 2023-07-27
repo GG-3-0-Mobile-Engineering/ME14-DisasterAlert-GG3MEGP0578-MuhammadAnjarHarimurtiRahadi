@@ -11,8 +11,11 @@ import com.bumptech.glide.request.RequestOptions
 import com.example.disasteralert.R
 import com.example.disasteralert.data.remote.response.GeometriesItem
 import com.example.disasteralert.databinding.DisasterDetailItemBinding
+import com.example.disasteralert.helper.Util
 
-class DisasterAdapter : ListAdapter<GeometriesItem, DisasterAdapter.ViewHolder>(DIFF_CALLBACK) {
+class DisasterAdapter(
+    private val onDisasterItemClick: (GeometriesItem) -> Unit
+) : ListAdapter<GeometriesItem, DisasterAdapter.ViewHolder>(DIFF_CALLBACK) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding =
             DisasterDetailItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -22,6 +25,10 @@ class DisasterAdapter : ListAdapter<GeometriesItem, DisasterAdapter.ViewHolder>(
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val disasterItem = getItem(position)
         holder.bind(disasterItem)
+
+        holder.binding.cvDisasterItem.setOnClickListener {
+            onDisasterItemClick(disasterItem)
+        }
     }
 
     class ViewHolder(var binding: DisasterDetailItemBinding) :
@@ -32,7 +39,8 @@ class DisasterAdapter : ListAdapter<GeometriesItem, DisasterAdapter.ViewHolder>(
                     RequestOptions.placeholderOf(R.drawable.ic_loading).error(R.drawable.ic_error)
                 ).into(ivDisasterImage)
                 tvDisasterType.text = disasterItem.properties.disasterType
-                tvDisasterTime.text = disasterItem.properties.createdAt
+                tvDisasterPlace.text = Util.getProvinceName(disasterItem.properties.tags.instanceRegionCode)
+                tvDisasterTime.text = Util.getDatePresentationFormat(disasterItem.properties.createdAt)
             }
         }
     }

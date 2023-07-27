@@ -40,10 +40,13 @@
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_disaster_list"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toBottomOf="@+id/textView"
+            android:layout_height="0dp"
             android:layout_marginTop="@dimen/dimen_8dp"
-            tools:listitem="@layout/disaster_detail_item"/>
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toBottomOf="@+id/textView"
+            tools:listitem="@layout/disaster_detail_item" />
 
         <TextView
             android:id="@+id/tv_no_data"
