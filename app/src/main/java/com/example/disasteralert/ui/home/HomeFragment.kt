@@ -13,6 +13,7 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.RelativeLayout
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -31,6 +32,7 @@ import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
+import com.example.disasteralert.ui.settings.SettingsViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
@@ -38,6 +40,7 @@ import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.Marker
 import com.google.android.gms.maps.model.MarkerOptions
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -61,6 +64,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
 
     private var latestFilter: String = ""
+    private var isDarkModeActive: Boolean = false
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
@@ -91,11 +95,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mapFragment.getMapAsync(this)
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
+        checkTheme(viewModel)
+        setBottomSheet()
         getDisasterData(viewModel)
         setFilterList(viewModel)
         setSearchLayout(viewModel)
         modifyBottomSheet()
-        setBottomSheet()
 
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String, province: String) {
@@ -110,6 +115,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             val filterDialogFragment = FilterFragment()
             val fragmentManager = childFragmentManager
             filterDialogFragment.show(fragmentManager, FilterFragment::class.java.simpleName)
+        }
+    }
+
+    private fun checkTheme(viewModel: HomeViewModel) {
+        viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
+            this.isDarkModeActive = isDarkModeActive
         }
     }
 
@@ -192,6 +203,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mMap = googleMap
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.setOnMarkerClickListener(this)
+
+        if (isDarkModeActive) {
+            mMap.setMapStyle(MapStyleOptions.loadRawResourceStyle(requireActivity(), R.raw.map_in_night));
+        } else {
+            mMap.mapType = GoogleMap.MAP_TYPE_NORMAL
+        }
 
         val locationButton =
             (mapFragment.view?.findViewById<View>(Integer.parseInt("1"))?.parent as View).findViewById<View>(

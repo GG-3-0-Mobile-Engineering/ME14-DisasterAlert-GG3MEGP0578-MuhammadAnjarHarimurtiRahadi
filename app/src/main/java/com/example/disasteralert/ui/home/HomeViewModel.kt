@@ -25,4 +25,8 @@ class HomeViewModel(
             pref.saveLatestFilter(latestFilter)
         }
     }
+
+    fun getThemeSettings(): LiveData<Boolean> {
+        return pref.getThemeSetting().asLiveData()
+    }
 }
