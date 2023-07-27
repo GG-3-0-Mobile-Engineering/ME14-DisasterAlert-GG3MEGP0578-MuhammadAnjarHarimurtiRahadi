@@ -9,7 +9,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.disasteralert.R
-import com.example.disasteralert.data.remote.response.GeometriesItem
+import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
 import com.example.disasteralert.databinding.DisasterDetailItemBinding
 import com.example.disasteralert.helper.Util
 

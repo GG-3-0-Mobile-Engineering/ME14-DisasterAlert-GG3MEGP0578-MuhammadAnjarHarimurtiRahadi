@@ -2,7 +2,7 @@ package com.example.disasteralert.data
 
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
-import com.example.disasteralert.data.remote.response.DisasterResponse
+import com.example.disasteralert.data.remote.response.disasterresponse.DisasterResponse
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.helper.Util
 

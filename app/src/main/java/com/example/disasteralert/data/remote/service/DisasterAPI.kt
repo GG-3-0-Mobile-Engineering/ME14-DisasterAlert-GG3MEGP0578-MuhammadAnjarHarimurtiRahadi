@@ -1,7 +1,6 @@
 package com.example.disasteralert.data.remote.service
 
-import com.example.disasteralert.data.remote.response.DisasterResponse
-import retrofit2.Call
+import com.example.disasteralert.data.remote.response.disasterresponse.DisasterResponse
 import retrofit2.http.GET
 import retrofit2.http.Query
 
@@ -24,6 +23,11 @@ interface DisasterAPI {
     suspend fun getDisasterDataByPeriod(
         @Query("start") startDate: String,
         @Query("end") endDate: String,
+        @Query("admin") location: String
+    ): DisasterResponse
+
+    @GET("reports/archive")
+    suspend fun getFloodGaugesData(
         @Query("admin") location: String
     ): DisasterResponse
 }

@@ -1,4 +1,4 @@
-package com.example.disasteralert.data.remote.response
+package com.example.disasteralert.data.remote.response.disasterresponse
 
 import com.google.gson.annotations.SerializedName
 

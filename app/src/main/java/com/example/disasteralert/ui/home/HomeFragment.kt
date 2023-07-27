@@ -13,7 +13,6 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.RelativeLayout
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatDelegate
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
@@ -27,12 +26,11 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
-import com.example.disasteralert.data.remote.response.GeometriesItem
+import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
-import com.example.disasteralert.ui.settings.SettingsViewModel
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.CameraUpdateFactory
