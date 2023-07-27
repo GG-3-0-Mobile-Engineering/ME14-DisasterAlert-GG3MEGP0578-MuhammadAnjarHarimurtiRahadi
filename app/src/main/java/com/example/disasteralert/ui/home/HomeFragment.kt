@@ -30,6 +30,7 @@ import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
+import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.MyWorker
@@ -178,17 +179,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                         )
 
                         if (floodGaugesData.isNotEmpty()) {
-                            val data = Data.Builder().putString(
-                                MyWorker.EXTRA_DATA,
-                                floodGaugesData[0].floodGaugesProperties.gaugenameid
-                            ).build()
-                            val constraints =
-                                Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                                    .build()
-                            periodicWorkRequest = PeriodicWorkRequest.Builder(
-                                MyWorker::class.java, 60, TimeUnit.MINUTES
-                            ).setInputData(data).setConstraints(constraints).build()
-                            workManager.enqueue(periodicWorkRequest)
+                            setWorkManager(floodGaugesData.last())
                         }
                     }
                     is Results.Error -> {
@@ -200,6 +191,25 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 }
             }
         }
+    }
+
+    private fun setWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
+        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
+        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
+        val data = Data.Builder().putString(
+            MyWorker.EXTRA_NAME,
+            gaugeName
+        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
+        val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        if (observation.f3 >= 3) {
+            periodicWorkRequest = PeriodicWorkRequest.Builder(
+                MyWorker::class.java, 60, TimeUnit.MINUTES
+            ).setInputData(data).setConstraints(constraints).build()
+            workManager.enqueue(periodicWorkRequest)
+        }
+
     }
 
     private fun checkTheme(viewModel: HomeViewModel) {
@@ -265,7 +275,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
                     getDisasterData()
-                    startPeriodicTask()
                 } else if (newText.length >= 3) {
                     binding.cvSuggestion.visibility = View.VISIBLE
 
