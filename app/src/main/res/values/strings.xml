@@ -9,4 +9,10 @@
     <string name="disaster_time_dummy">2016-12-09</string>
     <string name="no_data">There is no data</string>
     <string name="disaster_place_dummy">Jawa Tengah</string>
+    <string name="filter_disaster_by_period">Filter Disaster by Period</string>
+    <string name="start_date_title">Start Date</string>
+    <string name="end_date_title">End Date</string>
+    <string name="province_title">Province Name</string>
+    <string name="cancel">Cancel</string>
+    <string name="apply">Apply</string>
 </resources>

@@ -19,7 +19,7 @@
             android:id="@+id/imageView"
             android:layout_width="@dimen/dimen_48dp"
             android:layout_height="@dimen/dimen_8dp"
-            android:background="@drawable/bottom_sheet_background"
+            android:background="@drawable/bottom_sheet_decoration"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent"

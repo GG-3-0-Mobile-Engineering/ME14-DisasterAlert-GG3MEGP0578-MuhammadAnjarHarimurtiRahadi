@@ -19,4 +19,11 @@ interface DisasterAPI {
     suspend fun getDisasterDataByFilter(
         @Query("disaster") disasterFilter: String
     ): DisasterResponse
+
+    @GET("reports/archive")
+    suspend fun getDisasterDataByPeriod(
+        @Query("start") startDate: String,
+        @Query("end") endDate: String,
+        @Query("admin") location: String
+    ): DisasterResponse
 }

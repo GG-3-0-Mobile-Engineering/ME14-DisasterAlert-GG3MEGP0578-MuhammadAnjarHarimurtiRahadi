@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Bundle
-import android.util.DisplayMetrics
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -59,6 +58,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private lateinit var lastPinLocation: LatLng
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
+    lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
+
     private var latestFilter: String = ""
 
     private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
@@ -95,19 +96,35 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         setSearchLayout(viewModel)
         modifyBottomSheet()
         setBottomSheet()
+
+        filterDialogListener = object : FilterFragment.OnFilterDialogListener {
+            override fun onFilterChosen(startDate: String, endDate: String, province: String) {
+                if (startDate.isNotEmpty() || endDate.isNotEmpty()) getDisasterData(
+                    viewModel, locFilter = province, startDate = startDate, endDate = endDate
+                )
+                else getDisasterData(viewModel, locFilter = province)
+            }
+        }
+
+        binding.btnFilter.setOnClickListener {
+            val filterDialogFragment = FilterFragment()
+            val fragmentManager = childFragmentManager
+            filterDialogFragment.show(fragmentManager, FilterFragment::class.java.simpleName)
+        }
     }
 
     private fun setBottomSheet() {
 
         val bottomSheet = binding.bottomSheetSection.mcvBottomSheet
         val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
-        bottomSheetBehavior.addBottomSheetCallback(object : BottomSheetBehavior.BottomSheetCallback() {
+        bottomSheetBehavior.addBottomSheetCallback(object :
+            BottomSheetBehavior.BottomSheetCallback() {
             override fun onStateChanged(bottomSheet: View, newState: Int) {}
 
             override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                Log.d("Peak",slideOffset.toString())
-                if (slideOffset in 0.3..0.7)
-                    bottomSheetBehavior.state = BottomSheetBehavior.STATE_HALF_EXPANDED
+                Log.d("Peak", slideOffset.toString())
+                if (slideOffset in 0.3..0.7) bottomSheetBehavior.state =
+                    BottomSheetBehavior.STATE_HALF_EXPANDED
             }
         })
     }
@@ -218,7 +235,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun getDisasterData(
-        viewModel: HomeViewModel, locFilter: String = "", disasterFilter: String = ""
+        viewModel: HomeViewModel,
+        locFilter: String = "",
+        disasterFilter: String = "",
+        startDate: String = "",
+        endDate: String = ""
     ) {
         val disasterAdapter = DisasterAdapter(onDisasterItemClick = { disasterItem ->
             val position = Util.getLatLngFormat(
@@ -231,7 +252,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             )
         })
         var disasterData: List<GeometriesItem>
-        viewModel.getAllDisasterData(locFilter, disasterFilter)
+        viewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
             .observe(viewLifecycleOwner) { disaster ->
                 if (disaster != null) {
                     when (disaster) {
@@ -259,10 +280,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                                 binding.bottomSheetSection.tvNoData.visibility = View.GONE
                             }
 
-
                             mMap.clear()
                             placeMarkerOnMap(disasterData)
-                            if (locFilter.isNotEmpty() || disasterFilter.isNotEmpty()) mMap.animateCamera(
+                            if (locFilter.isNotEmpty() || disasterFilter.isNotEmpty() || startDate.isNotEmpty()) mMap.animateCamera(
                                 CameraUpdateFactory.newLatLngZoom(
                                     lastPinLocation, 12f
                                 )

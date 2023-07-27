@@ -12,8 +12,9 @@ class HomeViewModel(
     private val disasterRepository: DisasterRepository, private val pref: SettingPreferences
 ) : ViewModel() {
 
-    fun getAllDisasterData(locFilter: String, disasterFilter: String) =
-        disasterRepository.getAllDisasterData(locFilter, disasterFilter)
+    fun getAllDisasterData(
+        locFilter: String, disasterFilter: String, startDate: String, endDate: String
+    ) = disasterRepository.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
 
     fun getLatestFilter(): LiveData<String> {
         return pref.getLatestFilter().asLiveData()

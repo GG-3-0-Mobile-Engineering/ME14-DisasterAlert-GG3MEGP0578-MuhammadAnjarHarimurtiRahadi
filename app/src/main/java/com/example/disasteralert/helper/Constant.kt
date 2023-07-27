@@ -2,6 +2,10 @@ package com.example.disasteralert.helper
 
 object Constant {
 
+    const val DATE_PICKER_TAG = "DatePicker"
+    const val ARG_DATE_START = "DateStart"
+    const val ARG_DATE_END = "DateEnd"
+
     val FILTER_TYPE = listOf(
         "Flood",
         "Earthquake",
