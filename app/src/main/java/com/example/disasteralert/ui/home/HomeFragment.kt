@@ -42,10 +42,7 @@ import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.MapStyleOptions
-import com.google.android.gms.maps.model.Marker
-import com.google.android.gms.maps.model.MarkerOptions
+import com.google.android.gms.maps.model.*
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
@@ -62,7 +59,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private lateinit var mapFragment: SupportMapFragment
 
     private lateinit var lastLocation: Location
-    private lateinit var lastPinLocation: LatLng
     private lateinit var fusedLocationClient: FusedLocationProviderClient
 
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
@@ -342,7 +338,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             if (location != null) {
                 lastLocation = location
                 val currentLatLong = Util.getLatLngFormat(location.latitude, location.longitude)
-                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(currentLatLong, 16f))
+                moveCameraAction(builder = null, location = currentLatLong, zoom = 14f)
             }
         }
     }
@@ -357,11 +353,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             val position = Util.getLatLngFormat(
                 disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
             )
-            mMap.animateCamera(
-                CameraUpdateFactory.newLatLngZoom(
-                    position, 12f
-                )
-            )
+            moveCameraAction(builder = null, location = position, zoom = 14f)
         })
         var disasterData: List<GeometriesItem>
         homeViewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
@@ -394,11 +386,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
                             mMap.clear()
                             placeMarkerOnMap(disasterData)
-                            if (locFilter.isNotEmpty() || disasterFilter.isNotEmpty() || startDate.isNotEmpty()) mMap.animateCamera(
-                                CameraUpdateFactory.newLatLngZoom(
-                                    lastPinLocation, 12f
-                                )
-                            )
                         }
                         is Results.Error -> {
                             showLoading(false)
@@ -428,16 +415,27 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
+        val builder = LatLngBounds.Builder()
         disasterData.forEach { disasterItem ->
             val position = Util.getLatLngFormat(
                 disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
             )
-            lastPinLocation = position
+            builder.include(position)
             val markerOptions = MarkerOptions().position(position)
             val areaCode = disasterItem.properties.tags.instanceRegionCode
             val provinceName = Constant.AREA[areaCode]
             markerOptions.title(provinceName)
             mMap.addMarker(markerOptions)
+        }
+
+        moveCameraAction(builder = builder, null)
+    }
+
+    private fun moveCameraAction(builder: LatLngBounds.Builder?, location: LatLng?, zoom: Float = 14f) {
+        if (location != null)
+            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, zoom))
+        else if (builder != null) {
+            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48))
         }
     }
 
