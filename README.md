@@ -12,6 +12,13 @@
   </p>
 </p>
 
+## Feature
+1. Disaster data is updated in real-time.
+2. Interactive maps that showing disaster location and detail.
+3. Detail information list such as disaster type, location, and date.
+4. Filtering disaster by Location, Time Period, and Disaster Type (Flood, Earthquake, Fire, Haze, Wind, Volcano).
+5. Push notification for warning information
+
 ## Getting Started
 1. Fetch the latest source code from the master branch.
 
