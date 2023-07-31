@@ -1,7 +1,6 @@
 package com.example.disasteralert.ui.home
 
 import android.Manifest
-import android.content.Context
 import android.content.pm.PackageManager
 import android.location.Location
 import android.os.Build
@@ -12,17 +11,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.RelativeLayout
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.work.*
@@ -36,9 +32,10 @@ import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.MyWorker
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
+import com.example.disasteralert.helper.Util.moveCameraAction
+import com.example.disasteralert.helper.Util.placeMarkerOnMap
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationServices
-import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -47,6 +44,8 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 
@@ -58,11 +57,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private lateinit var mMap: GoogleMap
     private lateinit var mapFragment: SupportMapFragment
 
-    private lateinit var lastLocation: Location
-    private lateinit var fusedLocationClient: FusedLocationProviderClient
-
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
-
     private var latestFilter: String = ""
     private var isDarkModeActive: Boolean = false
 
@@ -70,8 +65,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private lateinit var workManager: WorkManager
     private lateinit var periodicWorkRequest: PeriodicWorkRequest
-
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -86,9 +79,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mapFragment =
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
-        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
+//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
-        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
+        val pref = SettingPreferences.getInstance(requireActivity())
         val viewModel: HomeViewModel by viewModels {
             ViewModelFactory.getInstance(
                 requireActivity(), pref
@@ -105,7 +98,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun init() {
-        requestPermission()
         setBottomSheet()
         getDisasterData()
         setFilterList()
@@ -129,36 +121,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun requestPermission() {
-        val requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Toast.makeText(
-                    requireActivity(), "Notifications permission granted", Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                Toast.makeText(
-                    requireActivity(), "Notifications permission rejected", Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-
-        if (Build.VERSION.SDK_INT >= 33) {
-            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
-
-        if (ActivityCompat.checkSelfPermission(
-                requireActivity(), Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            ActivityCompat.requestPermissions(
-                requireActivity(), arrayOf(Manifest.permission.ACCESS_FINE_LOCATION), 1
-            )
-            return
-        }
-    }
-
     private fun startPeriodicTask() {
         homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
             if (floodGauges != null) {
@@ -175,7 +137,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                         )
 
                         if (floodGaugesData.isNotEmpty()) {
-                            setWorkManager(floodGaugesData.last())
+                            for (element in floodGaugesData) {
+                                lifecycleScope.launch {
+                                    delay(5000L)
+                                    setWorkManager(element)
+                                }
+                            }
                         }
                     }
                     is Results.Error -> {
@@ -300,47 +267,9 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mMap = googleMap
         mMap.uiSettings.isZoomControlsEnabled = true
         mMap.setOnMarkerClickListener(this)
+        mMap.setPadding(0, 0, 0, 150)
 
         checkTheme(homeViewModel)
-
-        val locationButton =
-            (mapFragment.view?.findViewById<View>(Integer.parseInt("1"))?.parent as View).findViewById<View>(
-                Integer.parseInt("2")
-            )
-        val rlp = locationButton.layoutParams as RelativeLayout.LayoutParams
-
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_BOTTOM, RelativeLayout.TRUE)
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT, RelativeLayout.TRUE)
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_RIGHT, 0)
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_TOP, 0)
-
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_END, 0)
-        rlp.addRule(RelativeLayout.ALIGN_END, 0)
-        rlp.addRule(RelativeLayout.ALIGN_PARENT_LEFT)
-        rlp.setMargins(30, 0, 0, 75)
-
-        googleMap.setPadding(0, 0, 0, 150)
-
-        setUpMap()
-    }
-
-    private fun setUpMap() {
-        if (ActivityCompat.checkSelfPermission(
-                requireActivity(), Manifest.permission.ACCESS_FINE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(
-                requireActivity(), Manifest.permission.ACCESS_COARSE_LOCATION
-            ) != PackageManager.PERMISSION_GRANTED
-        ) {
-            return
-        }
-        mMap.isMyLocationEnabled = true
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                lastLocation = location
-                val currentLatLong = Util.getLatLngFormat(location.latitude, location.longitude)
-                moveCameraAction(builder = null, location = currentLatLong, zoom = 14f)
-            }
-        }
     }
 
     private fun getDisasterData(
@@ -353,7 +282,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             val position = Util.getLatLngFormat(
                 disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
             )
-            moveCameraAction(builder = null, location = position, zoom = 14f)
+            moveCameraAction(mMap = mMap, builder = null, location = position, zoom = 14f)
         })
         var disasterData: List<GeometriesItem>
         homeViewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
@@ -364,7 +293,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             showLoading(true)
                         }
                         is Results.Success -> {
-                            showLoading(false)
                             disasterData = disaster.data.result.objects.output.geometries
                             disasterAdapter.submitList(disasterData)
 
@@ -372,20 +300,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                                 layoutManager = LinearLayoutManager(context)
                                 setHasFixedSize(true)
                                 adapter = disasterAdapter
-                                visibility = if (disasterData.isEmpty()) View.GONE else View.VISIBLE
                             }
 
-                            if (disasterData.isEmpty()) {
-                                Toast.makeText(
-                                    requireActivity(), "There is no data", Toast.LENGTH_SHORT
-                                ).show()
-                                binding.bottomSheetSection.tvNoData.visibility = View.VISIBLE
-                            } else {
-                                binding.bottomSheetSection.tvNoData.visibility = View.GONE
-                            }
+                            showLoading(false, disasterData)
 
                             mMap.clear()
-                            placeMarkerOnMap(disasterData)
+                            placeMarkerOnMap(mMap, disasterData)
                         }
                         is Results.Error -> {
                             showLoading(false)
@@ -398,44 +318,24 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             }
     }
 
-    private fun showLoading(isLoading: Boolean) {
+    private fun showLoading(isLoading: Boolean, data: List<GeometriesItem>? = null) {
         if (isLoading) {
             binding.bottomSheetSection.apply {
                 progressBar.visibility = View.VISIBLE
                 rvDisasterList.visibility = View.INVISIBLE
                 tvNoData.visibility = View.GONE
             }
-
         } else {
             binding.bottomSheetSection.apply {
                 progressBar.visibility = View.GONE
-                tvNoData.visibility = View.VISIBLE
+                tvNoData.visibility = View.GONE
+                rvDisasterList.visibility = View.VISIBLE
+
+                if (data?.isEmpty() == true) {
+                    tvNoData.visibility = View.VISIBLE
+                    rvDisasterList.visibility = View.GONE
+                }
             }
-        }
-    }
-
-    private fun placeMarkerOnMap(disasterData: List<GeometriesItem>) {
-        val builder = LatLngBounds.Builder()
-        disasterData.forEach { disasterItem ->
-            val position = Util.getLatLngFormat(
-                disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
-            )
-            builder.include(position)
-            val markerOptions = MarkerOptions().position(position)
-            val areaCode = disasterItem.properties.tags.instanceRegionCode
-            val provinceName = Constant.AREA[areaCode]
-            markerOptions.title(provinceName)
-            mMap.addMarker(markerOptions)
-        }
-
-        moveCameraAction(builder = builder, null)
-    }
-
-    private fun moveCameraAction(builder: LatLngBounds.Builder?, location: LatLng?, zoom: Float = 14f) {
-        if (location != null)
-            mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(location, zoom))
-        else if (builder != null) {
-            mMap.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 48))
         }
     }
 

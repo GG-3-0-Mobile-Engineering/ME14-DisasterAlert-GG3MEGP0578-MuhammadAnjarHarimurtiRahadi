@@ -1,13 +1,13 @@
 package com.example.disasteralert
 
-import android.content.Context
+import android.Manifest
+import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatDelegate
-import androidx.datastore.core.DataStore
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.preferencesDataStore
 import androidx.navigation.NavController
 import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.fragment.findNavController
@@ -27,22 +27,24 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
 
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+    private lateinit var settingsViewModel: SettingsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        val pref = SettingPreferences.getInstance(dataStore)
+        val pref = SettingPreferences.getInstance(this)
 
         val factory: ViewModelFactory = ViewModelFactory.getInstance(applicationContext, pref)
         val viewModel: SettingsViewModel by viewModels { factory }
-
-        checkTheme(viewModel)
+        settingsViewModel = viewModel
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.findNavController()
+
+        checkTheme()
+        checkPermission()
 
         setupActionBarWithNavController(navController)
 
@@ -50,13 +52,33 @@ class MainActivity : AppCompatActivity() {
             initFlipper()
     }
 
-    private fun checkTheme(viewModel: SettingsViewModel) {
-        viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
+    private fun checkTheme() {
+        settingsViewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
             if (isDarkModeActive) {
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES)
             } else {
                 AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
             }
+        }
+    }
+
+    private fun checkPermission() {
+        val requestPermissionLauncher = registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                Toast.makeText(
+                    this, "Notifications permission granted", Toast.LENGTH_SHORT
+                ).show()
+            } else {
+                Toast.makeText(
+                    this, "Notifications permission rejected", Toast.LENGTH_SHORT
+                ).show()
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= 33) {
+            requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
         }
     }
 

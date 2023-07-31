@@ -22,8 +22,6 @@ class SettingsFragment : Fragment() {
     private var _binding: FragmentSettingsBinding? = null
     private val binding get() = _binding!!
 
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -35,7 +33,7 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val pref = SettingPreferences.getInstance(requireActivity().dataStore)
+        val pref = SettingPreferences.getInstance(requireActivity())
 
         val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
         val viewModel: SettingsViewModel by viewModels { factory }
