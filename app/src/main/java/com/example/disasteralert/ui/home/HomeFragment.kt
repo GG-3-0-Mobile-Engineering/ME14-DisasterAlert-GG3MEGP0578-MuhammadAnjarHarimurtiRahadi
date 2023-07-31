@@ -79,7 +79,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mapFragment =
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
-//        fusedLocationClient = LocationServices.getFusedLocationProviderClient(requireActivity())
 
         val pref = SettingPreferences.getInstance(requireActivity())
         val viewModel: HomeViewModel by viewModels {
@@ -89,21 +88,19 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
         homeViewModel = viewModel
 
-        workManager = WorkManager.getInstance(requireActivity())
         init()
 
-        binding.btnSettings.setOnClickListener {
-            findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
-        }
-    }
+        binding.apply {
+            btnSettings.setOnClickListener {
+                findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
+            }
 
-    private fun init() {
-        setBottomSheet()
-        getDisasterData()
-        setFilterList()
-        setSearchLayout()
-        modifyBottomSheet()
-        startPeriodicTask()
+            btnFilter.setOnClickListener {
+                val filterDialogFragment = FilterFragment()
+                val fragmentManager = childFragmentManager
+                filterDialogFragment.show(fragmentManager, FilterFragment::class.java.simpleName)
+            }
+        }
 
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String, province: String) {
@@ -113,66 +110,14 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 else getDisasterData(locFilter = province)
             }
         }
-
-        binding.btnFilter.setOnClickListener {
-            val filterDialogFragment = FilterFragment()
-            val fragmentManager = childFragmentManager
-            filterDialogFragment.show(fragmentManager, FilterFragment::class.java.simpleName)
-        }
     }
 
-    private fun startPeriodicTask() {
-        homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
-            if (floodGauges != null) {
-                when (floodGauges) {
-                    is Results.Loading -> {
-                        showLoading(true)
-                    }
-                    is Results.Success -> {
-                        showLoading(false)
-                        val floodGaugesData =
-                            floodGauges.data.floodGaugesResult.objects.output.geometries
-                        Log.d(
-                            "OBSERVATION: ", floodGaugesData[0].floodGaugesProperties.gaugenameid
-                        )
-
-                        if (floodGaugesData.isNotEmpty()) {
-                            for (element in floodGaugesData) {
-                                lifecycleScope.launch {
-                                    delay(5000L)
-                                    setWorkManager(element)
-                                }
-                            }
-                        }
-                    }
-                    is Results.Error -> {
-                        showLoading(false)
-                        Toast.makeText(
-                            requireActivity(), floodGauges.error, Toast.LENGTH_SHORT
-                        ).show()
-                    }
-                }
-            }
-        }
-    }
-
-    private fun setWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
-        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
-        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-        val data = Data.Builder().putString(
-            MyWorker.EXTRA_NAME,
-            gaugeName
-        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
-        val constraints =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-        if (observation.f3 >= 3) {
-            periodicWorkRequest = PeriodicWorkRequest.Builder(
-                MyWorker::class.java, 60, TimeUnit.MINUTES
-            ).setInputData(data).setConstraints(constraints).build()
-            workManager.enqueue(periodicWorkRequest)
-        }
-
+    private fun init() {
+        setBottomSheet()
+        getDisasterData()
+        setFilterList()
+        setSearchLayout()
+        startPeriodicTask()
     }
 
     private fun checkTheme(viewModel: HomeViewModel) {
@@ -191,7 +136,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     }
 
     private fun setBottomSheet() {
-
+        modifyBottomSheet()
         val bottomSheet = binding.bottomSheetSection.mcvBottomSheet
         val bottomSheetBehavior = BottomSheetBehavior.from(bottomSheet)
         bottomSheetBehavior.addBottomSheetCallback(object :
@@ -258,11 +203,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         })
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        _binding = null
-    }
-
     override fun onMapReady(googleMap: GoogleMap) {
         mMap = googleMap
         mMap.uiSettings.isZoomControlsEnabled = true
@@ -271,6 +211,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
         checkTheme(homeViewModel)
     }
+
+    override fun onMarkerClick(p0: Marker): Boolean = false
 
     private fun getDisasterData(
         locFilter: String = "",
@@ -318,27 +260,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             }
     }
 
-    private fun showLoading(isLoading: Boolean, data: List<GeometriesItem>? = null) {
-        if (isLoading) {
-            binding.bottomSheetSection.apply {
-                progressBar.visibility = View.VISIBLE
-                rvDisasterList.visibility = View.INVISIBLE
-                tvNoData.visibility = View.GONE
-            }
-        } else {
-            binding.bottomSheetSection.apply {
-                progressBar.visibility = View.GONE
-                tvNoData.visibility = View.GONE
-                rvDisasterList.visibility = View.VISIBLE
-
-                if (data?.isEmpty() == true) {
-                    tvNoData.visibility = View.VISIBLE
-                    rvDisasterList.visibility = View.GONE
-                }
-            }
-        }
-    }
-
     private fun setFilterList() {
         val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
             if (latestFilter == disasterFilter) {
@@ -376,5 +297,84 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    override fun onMarkerClick(p0: Marker): Boolean = false
+    private fun showLoading(isLoading: Boolean, data: List<GeometriesItem>? = null) {
+        if (isLoading) {
+            binding.bottomSheetSection.apply {
+                progressBar.visibility = View.VISIBLE
+                rvDisasterList.visibility = View.INVISIBLE
+                tvNoData.visibility = View.GONE
+            }
+        } else {
+            binding.bottomSheetSection.apply {
+                progressBar.visibility = View.GONE
+                tvNoData.visibility = View.GONE
+                rvDisasterList.visibility = View.VISIBLE
+
+                if (data?.isEmpty() == true) {
+                    tvNoData.visibility = View.VISIBLE
+                    rvDisasterList.visibility = View.GONE
+                }
+            }
+        }
+    }
+
+    private fun startPeriodicTask() {
+        workManager = WorkManager.getInstance(requireActivity())
+        homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
+            if (floodGauges != null) {
+                when (floodGauges) {
+                    is Results.Loading -> {
+                        showLoading(true)
+                    }
+                    is Results.Success -> {
+                        showLoading(false)
+                        val floodGaugesData =
+                            floodGauges.data.floodGaugesResult.objects.output.geometries
+                        Log.d(
+                            "OBSERVATION: ", floodGaugesData[0].floodGaugesProperties.gaugenameid
+                        )
+
+                        if (floodGaugesData.isNotEmpty()) {
+                            for (element in floodGaugesData) {
+                                lifecycleScope.launch {
+                                    delay(5000L)
+                                    setWorkManager(element)
+                                }
+                            }
+                        }
+                    }
+                    is Results.Error -> {
+                        showLoading(false)
+                        Toast.makeText(
+                            requireActivity(), floodGauges.error, Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    private fun setWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
+        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
+        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
+        val data = Data.Builder().putString(
+            MyWorker.EXTRA_NAME,
+            gaugeName
+        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
+        val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        if (observation.f3 >= 3) {
+            periodicWorkRequest = PeriodicWorkRequest.Builder(
+                MyWorker::class.java, 60, TimeUnit.MINUTES
+            ).setInputData(data).setConstraints(constraints).build()
+            workManager.enqueue(periodicWorkRequest)
+        }
+
+    }
+    
+    override fun onDestroy() {
+        super.onDestroy()
+        _binding = null
+    }
 }
