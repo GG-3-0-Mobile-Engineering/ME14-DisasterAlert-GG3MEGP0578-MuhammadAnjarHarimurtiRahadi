@@ -65,17 +65,7 @@ class MainActivity : AppCompatActivity() {
     private fun checkPermission() {
         val requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestPermission()
-        ) { isGranted: Boolean ->
-            if (isGranted) {
-                Toast.makeText(
-                    this, "Notifications permission granted", Toast.LENGTH_SHORT
-                ).show()
-            } else {
-                Toast.makeText(
-                    this, "Notifications permission rejected", Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
+        ) {}
 
         if (Build.VERSION.SDK_INT >= 33) {
             requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
