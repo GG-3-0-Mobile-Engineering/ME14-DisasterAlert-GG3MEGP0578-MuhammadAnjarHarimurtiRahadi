@@ -1,9 +1,5 @@
 package com.example.disasteralert.ui.home
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.location.Location
-import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -12,9 +8,7 @@ import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
-import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
@@ -34,8 +28,7 @@ import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
 import com.example.disasteralert.helper.Util.moveCameraAction
 import com.example.disasteralert.helper.Util.placeMarkerOnMap
-import com.google.android.gms.location.FusedLocationProviderClient
-import com.google.android.gms.location.LocationServices
+import com.example.disasteralert.helper.Util.setPeriodicWorkManager
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -59,12 +52,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
     private var latestFilter: String = ""
-    private var isDarkModeActive: Boolean = false
 
     private lateinit var homeViewModel: HomeViewModel
-
-    private lateinit var workManager: WorkManager
-    private lateinit var periodicWorkRequest: PeriodicWorkRequest
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -117,12 +106,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         getDisasterData()
         setFilterList()
         setSearchLayout()
-        startPeriodicTask()
+        getFloodGaugesData()
     }
 
     private fun checkTheme(viewModel: HomeViewModel) {
         viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
-            this.isDarkModeActive = isDarkModeActive
             if (isDarkModeActive) {
                 mMap.setMapStyle(
                     MapStyleOptions.loadRawResourceStyle(
@@ -318,8 +306,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun startPeriodicTask() {
-        workManager = WorkManager.getInstance(requireActivity())
+    private fun getFloodGaugesData() {
         homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
             if (floodGauges != null) {
                 when (floodGauges) {
@@ -330,15 +317,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                         showLoading(false)
                         val floodGaugesData =
                             floodGauges.data.floodGaugesResult.objects.output.geometries
-                        Log.d(
-                            "OBSERVATION: ", floodGaugesData[0].floodGaugesProperties.gaugenameid
-                        )
 
                         if (floodGaugesData.isNotEmpty()) {
                             for (element in floodGaugesData) {
                                 lifecycleScope.launch {
+                                    setPeriodicWorkManager(requireActivity(), element)
                                     delay(5000L)
-                                    setWorkManager(element)
                                 }
                             }
                         }
@@ -352,25 +336,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 }
             }
         }
-    }
-
-    private fun setWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
-        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
-        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-        val data = Data.Builder().putString(
-            MyWorker.EXTRA_NAME,
-            gaugeName
-        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
-        val constraints =
-            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
-                .build()
-        if (observation.f3 >= 3) {
-            periodicWorkRequest = PeriodicWorkRequest.Builder(
-                MyWorker::class.java, 60, TimeUnit.MINUTES
-            ).setInputData(data).setConstraints(constraints).build()
-            workManager.enqueue(periodicWorkRequest)
-        }
-
     }
     
     override fun onDestroy() {

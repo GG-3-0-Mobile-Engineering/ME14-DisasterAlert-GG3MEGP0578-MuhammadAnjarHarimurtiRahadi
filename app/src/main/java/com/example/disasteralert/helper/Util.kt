@@ -1,8 +1,11 @@
 package com.example.disasteralert.helper
 
+import android.content.Context
 import android.view.View
 import android.widget.RelativeLayout
+import androidx.work.*
 import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
+import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.google.android.gms.maps.CameraUpdateFactory
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.SupportMapFragment
@@ -11,6 +14,7 @@ import com.google.android.gms.maps.model.LatLngBounds
 import com.google.android.gms.maps.model.MarkerOptions
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.concurrent.TimeUnit
 
 object Util {
 
@@ -72,5 +76,24 @@ object Util {
         }
 
         moveCameraAction(mMap = mMap, builder = builder, location = null)
+    }
+
+    fun setPeriodicWorkManager(context: Context ,floodGaugesItem: FloodGaugesGeometriesItem) {
+        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
+        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
+        var workManager: WorkManager = WorkManager.getInstance(context)
+        val data = Data.Builder().putString(
+            MyWorker.EXTRA_NAME,
+            gaugeName
+        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
+        val constraints =
+            Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED)
+                .build()
+        if (observation.f3 >= 3) {
+            val periodicWorkRequest: PeriodicWorkRequest = PeriodicWorkRequest.Builder(
+                MyWorker::class.java, 60, TimeUnit.MINUTES
+            ).setInputData(data).setConstraints(constraints).build()
+            workManager.enqueue(periodicWorkRequest)
+        }
     }
 }
