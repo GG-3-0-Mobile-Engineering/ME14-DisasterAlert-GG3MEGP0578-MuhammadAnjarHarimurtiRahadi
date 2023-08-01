@@ -9,13 +9,14 @@ import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
 import com.bumptech.glide.request.RequestOptions
 import com.example.disasteralert.R
+import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
 import com.example.disasteralert.databinding.DisasterDetailItemBinding
 import com.example.disasteralert.helper.Util
 
 class DisasterAdapter(
-    private val onDisasterItemClick: (GeometriesItem) -> Unit
-) : ListAdapter<GeometriesItem, DisasterAdapter.ViewHolder>(DIFF_CALLBACK) {
+    private val onDisasterItemClick: (DisasterEntity) -> Unit
+) : ListAdapter<DisasterEntity, DisasterAdapter.ViewHolder>(DIFF_CALLBACK) {
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val binding =
             DisasterDetailItemBinding.inflate(LayoutInflater.from(parent.context), parent, false)
@@ -33,30 +34,30 @@ class DisasterAdapter(
 
     class ViewHolder(var binding: DisasterDetailItemBinding) :
         RecyclerView.ViewHolder(binding.root) {
-        fun bind(disasterItem: GeometriesItem) {
+        fun bind(disasterItem: DisasterEntity) {
             binding.apply {
-                Glide.with(itemView.context).load(disasterItem.properties.imageUrl).apply(
+                Glide.with(itemView.context).load(disasterItem.disasterImageUrl).apply(
                     RequestOptions.placeholderOf(R.drawable.ic_loading).error(R.drawable.ic_error)
                 ).into(ivDisasterImage)
-                tvDisasterType.text = disasterItem.properties.disasterType
-                tvDisasterPlace.text = Util.getProvinceName(disasterItem.properties.tags.instanceRegionCode)
-                tvDisasterTime.text = Util.getDatePresentationFormat(disasterItem.properties.createdAt)
+                tvDisasterType.text = disasterItem.disasterType
+                tvDisasterPlace.text = disasterItem.disasterLoc?.let { Util.getProvinceName(it) }
+                tvDisasterTime.text = Util.getDatePresentationFormat(disasterItem.disasterDate)
             }
         }
     }
 
     companion object {
-        val DIFF_CALLBACK: DiffUtil.ItemCallback<GeometriesItem> =
-            object : DiffUtil.ItemCallback<GeometriesItem>() {
+        val DIFF_CALLBACK: DiffUtil.ItemCallback<DisasterEntity> =
+            object : DiffUtil.ItemCallback<DisasterEntity>() {
                 override fun areItemsTheSame(
-                    oldItem: GeometriesItem, newItem: GeometriesItem
+                    oldItem: DisasterEntity, newItem: DisasterEntity
                 ): Boolean {
-                    return oldItem.type == newItem.type
+                    return oldItem.pKey == newItem.pKey
                 }
 
                 @SuppressLint("DiffUtilEquals")
                 override fun areContentsTheSame(
-                    oldItem: GeometriesItem, newItem: GeometriesItem
+                    oldItem: DisasterEntity, newItem: DisasterEntity
                 ): Boolean {
                     return oldItem == newItem
                 }

@@ -18,7 +18,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
-import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
+import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.SettingPreferences
@@ -90,11 +90,24 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
 
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
-            override fun onFilterChosen(startDate: String, endDate: String, province: String) {
-                if (startDate.isNotEmpty() || endDate.isNotEmpty()) getDisasterData(
-                    locFilter = province, startDate = startDate, endDate = endDate
-                )
-                else getDisasterData(locFilter = province)
+            override fun onFilterChosen(startDate: String, endDate: String) {
+                if (startDate.isNotEmpty() || endDate.isNotEmpty()) {
+                    binding.btnFilter.setImageDrawable(
+                        ContextCompat.getDrawable(
+                            binding.btnFilter.context, R.drawable.baseline_filter_alt_off_24
+                        )
+                    )
+                    getDisasterData(startDate = startDate, endDate = endDate)
+                }
+                else {
+                    binding.btnFilter.setImageDrawable(
+                        ContextCompat.getDrawable(
+                            binding.btnFilter.context, R.drawable.baseline_filter_alt_24
+                        )
+                    )
+                    homeViewModel.getApiDisasterData()
+                    getDisasterData()
+                }
             }
         }
     }
@@ -139,10 +152,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun modifyBottomSheet() {
         val shapeAppearanceModel = ShapeAppearanceModel().toBuilder()
-        shapeAppearanceModel.setTopLeftCorner(CornerFamily.ROUNDED,
+        shapeAppearanceModel.setTopLeftCorner(
+            CornerFamily.ROUNDED,
             CornerSize { return@CornerSize 48F })
 
-        shapeAppearanceModel.setTopRightCorner(CornerFamily.ROUNDED,
+        shapeAppearanceModel.setTopRightCorner(
+            CornerFamily.ROUNDED,
             CornerSize { return@CornerSize 48F })
 
         binding.bottomSheetSection.mcvBottomSheet.shapeAppearanceModel =
@@ -180,10 +195,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             binding.svSearchLocation.setQuery(selectedItem, true)
                             binding.cvSuggestion.visibility = View.GONE
                             val areaKey = getAreaCode(selectedItem)
-                            if (latestFilter.isNotEmpty())
-                                getDisasterData(locFilter = areaKey, disasterFilter = latestFilter)
-                            else
-                                getDisasterData(locFilter = areaKey)
+                            if (latestFilter.isNotEmpty()) getDisasterData(
+                                locFilter = areaKey,
+                                disasterFilter = latestFilter
+                            )
+                            else getDisasterData(locFilter = areaKey)
 
                         }
                 }
@@ -211,47 +227,54 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     ) {
         val disasterAdapter = DisasterAdapter(onDisasterItemClick = { disasterItem ->
             val position = Util.getLatLngFormat(
-                disasterItem.coordinates[1] as Double, disasterItem.coordinates[0] as Double
+                disasterItem.latitude, disasterItem.longitude
             )
             moveCameraAction(mMap = mMap, builder = null, location = position, zoom = 14f)
         })
-        var disasterData: List<GeometriesItem>
-        homeViewModel.getAllDisasterData(locFilter, disasterFilter, startDate, endDate)
-            .observe(viewLifecycleOwner) { disaster ->
-                if (disaster != null) {
-                    when (disaster) {
-                        is Results.Loading -> {
-                            showLoading(true)
-                        }
-                        is Results.Success -> {
-                            disasterData = disaster.data.result.objects.output.geometries
-                            disasterAdapter.submitList(disasterData)
-
-                            binding.bottomSheetSection.rvDisasterList.apply {
-                                layoutManager = LinearLayoutManager(context)
-                                setHasFixedSize(true)
-                                adapter = disasterAdapter
+        if (startDate.isNotEmpty() && endDate.isNotEmpty()) {
+            homeViewModel.getPeriodicDisasterData(startDate, endDate).observe(viewLifecycleOwner) { disaster ->
+                    if (disaster != null) {
+                        when (disaster) {
+                            is Results.Loading -> {
+                                showLoading(true)
                             }
-
-                            showLoading(false, disasterData)
-
-                            mMap.clear()
-                            placeMarkerOnMap(mMap, disasterData)
-                        }
-                        is Results.Error -> {
-                            showLoading(false)
-                            Toast.makeText(
-                                requireActivity(), disaster.error, Toast.LENGTH_SHORT
-                            ).show()
+                            is Results.Success -> {
+                                setDisasterData(disaster.data, disasterAdapter)
+                            }
+                            is Results.Error -> {
+                                showLoading(false)
+                            }
                         }
                     }
                 }
-            }
+        } else {
+            homeViewModel.getAllDisasterData(locFilter, disasterFilter)
+                ?.observe(viewLifecycleOwner) {
+                    setDisasterData(it, disasterAdapter)
+                }
+        }
+    }
+
+    private fun setDisasterData(
+        disasterData: List<DisasterEntity>, disasterAdapter: DisasterAdapter
+    ) {
+        mMap.clear()
+        disasterAdapter.submitList(disasterData)
+
+        binding.bottomSheetSection.rvDisasterList.apply {
+            layoutManager = LinearLayoutManager(context)
+            setHasFixedSize(true)
+            adapter = disasterAdapter
+        }
+
+        showLoading(false, disasterData)
+        if (disasterData.isNotEmpty()) {
+            placeMarkerOnMap(mMap, disasterData)
+        }
     }
 
     private fun setFilterList() {
         val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
-            val query = binding.svSearchLocation.query ?: ""
             val searchLocQuery = getAreaCode(binding.svSearchLocation.query.toString())
             if (latestFilter == disasterFilter) {
                 homeViewModel.saveLatestFilter("")
@@ -290,7 +313,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun showLoading(isLoading: Boolean, data: List<GeometriesItem>? = null) {
+    private fun showLoading(isLoading: Boolean, data: List<DisasterEntity>? = null) {
         if (isLoading) {
             binding.bottomSheetSection.apply {
                 progressBar.visibility = View.VISIBLE
@@ -334,9 +357,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                     }
                     is Results.Error -> {
                         showLoading(false)
-                        Toast.makeText(
-                            requireActivity(), floodGauges.error, Toast.LENGTH_SHORT
-                        ).show()
                     }
                 }
             }

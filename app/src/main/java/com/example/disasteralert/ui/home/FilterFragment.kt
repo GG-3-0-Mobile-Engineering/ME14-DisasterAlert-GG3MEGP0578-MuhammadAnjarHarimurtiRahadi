@@ -35,11 +35,10 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        setSearchLayout()
-
         binding.apply {
             btnStartDate.setOnClickListener(this@FilterFragment)
             btnEndDate.setOnClickListener(this@FilterFragment)
+            btnRemove.setOnClickListener(this@FilterFragment)
             btnApply.setOnClickListener(this@FilterFragment)
             btnCancel.setOnClickListener(this@FilterFragment)
         }
@@ -63,7 +62,7 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
     }
 
     interface OnFilterDialogListener {
-        fun onFilterChosen(startDate: String, endDate: String, province: String)
+        fun onFilterChosen(startDate: String, endDate: String)
     }
 
     override fun onClick(v: View?) {
@@ -76,14 +75,15 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
                 val datePickerFragment = DatePickerFragment(Constant.ARG_DATE_END)
                 datePickerFragment.show(childFragmentManager, Constant.DATE_PICKER_TAG)
             }
+            R.id.btn_remove -> {
+                filterDialogListener?.onFilterChosen("", "")
+                dialog?.dismiss()
+            }
             R.id.btn_apply -> {
                 val startDate = binding.tvStartDate.text.toString()
                 val endDate = binding.tvEndDate.text.toString()
-                val province = binding.svSearchLocation.query.toString()
-                val areaKey =
-                    Constant.AREA.entries.find { it.value == province }?.key ?: ""
 
-                filterDialogListener?.onFilterChosen(startDate, endDate, areaKey)
+                filterDialogListener?.onFilterChosen(startDate, endDate)
                 dialog?.dismiss()
             }
             R.id.btn_cancel -> dialog?.cancel()
@@ -104,39 +104,5 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
             binding.tvStartDate.text = dateFormat.format(calendar.time)
         else if (dateStatus == Constant.ARG_DATE_END)
             binding.tvEndDate.text = dateFormat.format(calendar.time)
-    }
-
-    private fun setSearchLayout() {
-        val suggestionArea = ArrayList(Constant.AREA.values)
-        val listAdapter = ArrayAdapter(
-            requireActivity(), android.R.layout.simple_list_item_1, suggestionArea
-        )
-        binding.lvSuggestion.adapter = listAdapter
-
-        binding.svSearchLocation.setOnQueryTextListener(object : SearchView.OnQueryTextListener,
-            android.widget.SearchView.OnQueryTextListener {
-            override fun onQueryTextSubmit(query: String): Boolean {
-                binding.lvSuggestion.visibility = View.GONE
-                return false
-            }
-
-            override fun onQueryTextChange(newText: String): Boolean {
-                if (newText.isEmpty()) {
-                    binding.lvSuggestion.visibility = View.GONE
-                } else if (newText.length >= 3) {
-                    binding.lvSuggestion.visibility = View.VISIBLE
-
-                    listAdapter.filter.filter(newText)
-
-                    binding.lvSuggestion.onItemClickListener =
-                        AdapterView.OnItemClickListener { adapterView, view, position, id ->
-                            val selectedItem = adapterView.getItemAtPosition(position) as String
-                            binding.svSearchLocation.setQuery(selectedItem, false)
-                            binding.lvSuggestion.visibility = View.GONE
-                        }
-                }
-                return false
-            }
-        })
     }
 }

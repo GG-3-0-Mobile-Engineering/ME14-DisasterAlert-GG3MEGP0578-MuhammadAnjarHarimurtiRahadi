@@ -4,6 +4,9 @@ import com.google.gson.annotations.SerializedName
 
 data class Properties(
 
+	@field:SerializedName("pkey")
+	val pkey: String,
+
 	@field:SerializedName("image_url")
 	val imageUrl: String,
 

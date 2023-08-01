@@ -14,4 +14,5 @@
     <string name="province_title">Province Name</string>
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
+    <string name="remove_filter">Remove Filter</string>
 </resources>
