@@ -15,31 +15,29 @@ import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.work.*
 import com.example.disasteralert.R
 import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.remote.response.disasterresponse.GeometriesItem
-import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
-import com.example.disasteralert.helper.MyWorker
 import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
+import com.example.disasteralert.helper.Util.getAreaCode
 import com.example.disasteralert.helper.Util.moveCameraAction
 import com.example.disasteralert.helper.Util.placeMarkerOnMap
 import com.example.disasteralert.helper.Util.setPeriodicWorkManager
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
-import com.google.android.gms.maps.model.*
+import com.google.android.gms.maps.model.MapStyleOptions
+import com.google.android.gms.maps.model.Marker
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import java.util.concurrent.TimeUnit
 
 
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
@@ -181,9 +179,12 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             val selectedItem = adapterView.getItemAtPosition(position) as String
                             binding.svSearchLocation.setQuery(selectedItem, true)
                             binding.cvSuggestion.visibility = View.GONE
-                            val areaKey =
-                                Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
-                            getDisasterData(areaKey)
+                            val areaKey = getAreaCode(selectedItem)
+                            if (latestFilter.isNotEmpty())
+                                getDisasterData(locFilter = areaKey, disasterFilter = latestFilter)
+                            else
+                                getDisasterData(locFilter = areaKey)
+
                         }
                 }
                 return false
@@ -250,14 +251,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private fun setFilterList() {
         val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
+            val query = binding.svSearchLocation.query ?: ""
+            val searchLocQuery = getAreaCode(binding.svSearchLocation.query.toString())
             if (latestFilter == disasterFilter) {
                 homeViewModel.saveLatestFilter("")
-                getDisasterData()
+                if (searchLocQuery.isNotEmpty()) getDisasterData(locFilter = searchLocQuery) else getDisasterData()
             } else {
                 homeViewModel.saveLatestFilter(disasterFilter)
-                getDisasterData(disasterFilter = disasterFilter)
+                if (searchLocQuery.isNotEmpty()) getDisasterData(
+                    locFilter = searchLocQuery, disasterFilter = disasterFilter
+                )
+                else getDisasterData(disasterFilter = disasterFilter)
             }
-            binding.svSearchLocation.setQuery("", true)
         }, onDisasterDrawable = { disasterFilter, ivFilterStatus ->
             homeViewModel.getLatestFilter().observe(this) { latestFilter ->
                 this.latestFilter = latestFilter
@@ -337,7 +342,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             }
         }
     }
-    
+
     override fun onDestroy() {
         super.onDestroy()
         _binding = null

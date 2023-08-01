@@ -96,4 +96,8 @@ object Util {
             workManager.enqueue(periodicWorkRequest)
         }
     }
+
+    fun getAreaCode(selectedItem: String): String {
+        return Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
+    }
 }
