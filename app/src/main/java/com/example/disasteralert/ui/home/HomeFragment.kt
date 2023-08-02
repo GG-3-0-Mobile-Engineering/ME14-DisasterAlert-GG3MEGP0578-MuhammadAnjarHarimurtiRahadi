@@ -363,6 +363,11 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        homeViewModel.getApiDisasterData()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         _binding = null
