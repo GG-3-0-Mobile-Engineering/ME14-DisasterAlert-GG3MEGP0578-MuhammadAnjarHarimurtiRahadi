@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.Toast
 import androidx.appcompat.widget.SearchView
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
@@ -33,6 +32,7 @@ import com.google.android.gms.maps.SupportMapFragment
 import com.google.android.gms.maps.model.MapStyleOptions
 import com.google.android.gms.maps.model.Marker
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.chip.Chip
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
@@ -49,6 +49,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private lateinit var mapFragment: SupportMapFragment
 
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
+
     private var latestFilter: String = ""
 
     private lateinit var homeViewModel: HomeViewModel
@@ -75,8 +76,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
         homeViewModel = viewModel
 
-        init()
-
         binding.apply {
             btnSettings.setOnClickListener {
                 findNavController().navigate(R.id.action_homeFragment_to_settingsFragment)
@@ -88,7 +87,18 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 filterDialogFragment.show(fragmentManager, FilterFragment::class.java.simpleName)
             }
         }
+    }
 
+    private fun init() {
+        setBottomSheet()
+        getDisasterData()
+        getFilterData()
+        setSearchLayout()
+        getFloodGaugesData()
+        getDialogFilterData()
+    }
+
+    private fun getDialogFilterData() {
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String) {
                 if (startDate.isNotEmpty() || endDate.isNotEmpty()) {
@@ -98,8 +108,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                         )
                     )
                     getDisasterData(startDate = startDate, endDate = endDate)
-                }
-                else {
+                } else {
                     binding.btnFilter.setImageDrawable(
                         ContextCompat.getDrawable(
                             binding.btnFilter.context, R.drawable.baseline_filter_alt_24
@@ -110,14 +119,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 }
             }
         }
-    }
-
-    private fun init() {
-        setBottomSheet()
-        getDisasterData()
-        setFilterList()
-        setSearchLayout()
-        getFloodGaugesData()
     }
 
     private fun checkTheme(viewModel: HomeViewModel) {
@@ -183,21 +184,20 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             override fun onQueryTextChange(newText: String): Boolean {
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
-                    getDisasterData()
+                    if (latestFilter.isNotEmpty()) getDisasterData(disasterFilter = latestFilter)
+                    else getDisasterData()
                 } else if (newText.length >= 3) {
                     binding.cvSuggestion.visibility = View.VISIBLE
-
                     listAdapter.filter.filter(newText)
 
                     binding.lvSuggestion.onItemClickListener =
-                        AdapterView.OnItemClickListener { adapterView, view, position, id ->
+                        AdapterView.OnItemClickListener { adapterView, _, position, _ ->
                             val selectedItem = adapterView.getItemAtPosition(position) as String
                             binding.svSearchLocation.setQuery(selectedItem, true)
                             binding.cvSuggestion.visibility = View.GONE
                             val areaKey = getAreaCode(selectedItem)
                             if (latestFilter.isNotEmpty()) getDisasterData(
-                                locFilter = areaKey,
-                                disasterFilter = latestFilter
+                                locFilter = areaKey, disasterFilter = latestFilter
                             )
                             else getDisasterData(locFilter = areaKey)
 
@@ -215,6 +215,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mMap.setPadding(0, 0, 0, 150)
 
         checkTheme(homeViewModel)
+        init()
     }
 
     override fun onMarkerClick(p0: Marker): Boolean = false
@@ -232,7 +233,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             moveCameraAction(mMap = mMap, builder = null, location = position, zoom = 14f)
         })
         if (startDate.isNotEmpty() && endDate.isNotEmpty()) {
-            homeViewModel.getPeriodicDisasterData(startDate, endDate).observe(viewLifecycleOwner) { disaster ->
+            homeViewModel.getPeriodicDisasterData(startDate, endDate)
+                .observe(viewLifecycleOwner) { disaster ->
                     if (disaster != null) {
                         when (disaster) {
                             is Results.Loading -> {
@@ -273,43 +275,22 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         }
     }
 
-    private fun setFilterList() {
-        val filterAdapter = FilterAdapter(onDisasterFilterClick = { disasterFilter ->
+    private fun getFilterData() {
+        binding.chipFilterSection.chipFilter.setOnCheckedStateChangeListener { chipGroup, checkedIds ->
             val searchLocQuery = getAreaCode(binding.svSearchLocation.query.toString())
-            if (latestFilter == disasterFilter) {
-                homeViewModel.saveLatestFilter("")
-                if (searchLocQuery.isNotEmpty()) getDisasterData(locFilter = searchLocQuery) else getDisasterData()
-            } else {
-                homeViewModel.saveLatestFilter(disasterFilter)
+            if (checkedIds.isNotEmpty()) {
+                val selectedFilter: String =
+                    chipGroup.findViewById<Chip>(checkedIds.first()).text.toString().lowercase()
+
+                this.latestFilter = selectedFilter
                 if (searchLocQuery.isNotEmpty()) getDisasterData(
-                    locFilter = searchLocQuery, disasterFilter = disasterFilter
+                    locFilter = searchLocQuery, disasterFilter = selectedFilter
                 )
-                else getDisasterData(disasterFilter = disasterFilter)
+                else getDisasterData(disasterFilter = selectedFilter)
+            } else {
+                this.latestFilter = ""
+                if (searchLocQuery.isNotEmpty()) getDisasterData(locFilter = searchLocQuery) else getDisasterData()
             }
-        }, onDisasterDrawable = { disasterFilter, ivFilterStatus ->
-            homeViewModel.getLatestFilter().observe(this) { latestFilter ->
-                this.latestFilter = latestFilter
-                if (disasterFilter == latestFilter) {
-                    ivFilterStatus.setImageDrawable(
-                        ContextCompat.getDrawable(
-                            ivFilterStatus.context, R.drawable.baseline_remove_24
-                        )
-                    )
-                } else {
-                    ivFilterStatus.setImageDrawable(
-                        ContextCompat.getDrawable(
-                            ivFilterStatus.context, R.drawable.baseline_add_24
-                        )
-                    )
-                }
-            }
-        })
-        filterAdapter.submitList(Constant.FILTER_TYPE)
-        binding.rvFilter.apply {
-            layoutManager =
-                LinearLayoutManager(requireActivity(), LinearLayoutManager.HORIZONTAL, false)
-            setHasFixedSize(true)
-            adapter = filterAdapter
         }
     }
 

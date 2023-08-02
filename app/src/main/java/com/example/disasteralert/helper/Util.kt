@@ -59,7 +59,7 @@ object Util {
     fun setPeriodicWorkManager(context: Context, floodGaugesItem: FloodGaugesGeometriesItem) {
         val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
         val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-        var workManager: WorkManager = WorkManager.getInstance(context)
+        val workManager: WorkManager = WorkManager.getInstance(context)
         val data = Data.Builder().putString(
             MyWorker.EXTRA_NAME, gaugeName
         ).putString(MyWorker.EXTRA_OBS, observation.f4).build()

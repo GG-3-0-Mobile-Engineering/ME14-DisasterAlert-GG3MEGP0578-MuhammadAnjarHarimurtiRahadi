@@ -15,4 +15,10 @@
     <string name="cancel">Cancel</string>
     <string name="apply">Apply</string>
     <string name="remove_filter">Remove Filter</string>
+    <string name="disaster_flood">Flood</string>
+    <string name="disaster_earthquake">Earthquake</string>
+    <string name="disaster_fire">Fire</string>
+    <string name="disaster_haze">Haze</string>
+    <string name="disaster_wind">Wind</string>
+    <string name="disaster_volcano">volcano</string>
 </resources>

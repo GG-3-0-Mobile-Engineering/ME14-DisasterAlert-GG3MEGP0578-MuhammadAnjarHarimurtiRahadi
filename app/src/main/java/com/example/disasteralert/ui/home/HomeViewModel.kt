@@ -41,16 +41,6 @@ class HomeViewModel(
 
     fun getFloodGaugesData() = disasterRepository.getFloodGaugesData()
 
-    fun getLatestFilter(): LiveData<String> {
-        return pref.getLatestFilter().asLiveData()
-    }
-
-    fun saveLatestFilter(latestFilter: String) {
-        viewModelScope.launch {
-            pref.saveLatestFilter(latestFilter)
-        }
-    }
-
     fun getThemeSettings(): LiveData<Boolean> {
         return pref.getThemeSetting().asLiveData()
     }

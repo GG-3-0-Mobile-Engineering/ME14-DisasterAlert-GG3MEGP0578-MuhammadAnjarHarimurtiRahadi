@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.map
 class SettingPreferences private constructor(private val dataStore: DataStore<Preferences>) {
 
     private val _THEMEKEY = booleanPreferencesKey("theme_setting")
-    private val _FILTERKEY = stringPreferencesKey("filter_setting")
 
     fun getThemeSetting(): Flow<Boolean> {
         return dataStore.data.map { preferences ->
@@ -24,18 +23,6 @@ class SettingPreferences private constructor(private val dataStore: DataStore<Pr
     suspend fun saveThemeSetting(isDarkModeActive: Boolean) {
         dataStore.edit { preferences ->
             preferences[_THEMEKEY] = isDarkModeActive
-        }
-    }
-
-    fun getLatestFilter(): Flow<String> {
-        return dataStore.data.map { preferences ->
-            preferences[_FILTERKEY] ?: ""
-        }
-    }
-
-    suspend fun saveLatestFilter(latestFilter: String) {
-        dataStore.edit { preferences ->
-            preferences[_FILTERKEY] = latestFilter
         }
     }
 
