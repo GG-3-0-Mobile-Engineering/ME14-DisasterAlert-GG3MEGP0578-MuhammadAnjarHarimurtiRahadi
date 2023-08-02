@@ -42,7 +42,7 @@ MAPS_API_KEY=XXXXXXXXXX;
 - It's done!
 </ul>
 
-4. Run the app with Android Studio or Visual Studio.
+4. Run the app with Android Studio.
 
 ## Author
 This project is developed by [Anjar Harimurti](https://github.com/args06).
