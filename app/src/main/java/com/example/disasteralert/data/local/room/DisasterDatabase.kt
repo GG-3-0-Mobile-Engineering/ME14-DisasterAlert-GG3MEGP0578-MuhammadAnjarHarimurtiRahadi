@@ -10,15 +10,4 @@ import com.example.disasteralert.data.local.entity.DisasterEntity
 abstract class DisasterDatabase: RoomDatabase() {
     abstract fun disasterDao(): DisasterDao
 
-    companion object {
-        @Volatile
-        private var instance: DisasterDatabase? = null
-        fun getInstance(context: Context): DisasterDatabase =
-            instance ?: synchronized(this) {
-                instance ?: Room.databaseBuilder(
-                    context.applicationContext,
-                    DisasterDatabase::class.java, "Disaster.db"
-                ).build()
-            }
-    }
 }

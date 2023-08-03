@@ -9,8 +9,11 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import javax.inject.Inject
 
-class SettingPreferences private constructor(private val dataStore: DataStore<Preferences>) {
+class SettingPreferences @Inject constructor(
+    private val dataStore: DataStore<Preferences>
+) {
 
     private val _THEMEKEY = booleanPreferencesKey("theme_setting")
 
@@ -23,21 +26,6 @@ class SettingPreferences private constructor(private val dataStore: DataStore<Pr
     suspend fun saveThemeSetting(isDarkModeActive: Boolean) {
         dataStore.edit { preferences ->
             preferences[_THEMEKEY] = isDarkModeActive
-        }
-    }
-
-    companion object {
-        @Volatile
-        private var INSTANCE: SettingPreferences? = null
-
-        private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
-
-        fun getInstance(context: Context): SettingPreferences {
-            return INSTANCE ?: synchronized(this) {
-                val instance = SettingPreferences(context.dataStore)
-                INSTANCE = instance
-                instance
-            }
         }
     }
 }

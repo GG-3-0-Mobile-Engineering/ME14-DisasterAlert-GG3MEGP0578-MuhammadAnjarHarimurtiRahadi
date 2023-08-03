@@ -15,12 +15,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.disasteralert.R
-import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.helper.Constant
-import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
 import com.example.disasteralert.helper.Util.getAreaCode
 import com.example.disasteralert.helper.Util.moveCameraAction
@@ -36,10 +34,12 @@ import com.google.android.material.chip.Chip
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+@AndroidEntryPoint
 class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickListener {
 
     private var _binding: FragmentHomeBinding? = null
@@ -68,12 +68,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
 
-        val pref = SettingPreferences.getInstance(requireActivity())
-        val viewModel: HomeViewModel by viewModels {
-            ViewModelFactory.getInstance(
-                requireActivity(), pref
-            )
-        }
+        val viewModel: HomeViewModel by viewModels ()
         homeViewModel = viewModel
 
         binding.apply {

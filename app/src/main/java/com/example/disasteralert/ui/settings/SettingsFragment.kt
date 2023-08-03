@@ -12,11 +12,12 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.fragment.app.viewModels
 import com.example.disasteralert.R
-import com.example.disasteralert.ViewModelFactory
 import com.example.disasteralert.databinding.FragmentHomeBinding
 import com.example.disasteralert.databinding.FragmentSettingsBinding
 import com.example.disasteralert.helper.SettingPreferences
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class SettingsFragment : Fragment() {
 
     private var _binding: FragmentSettingsBinding? = null
@@ -33,12 +34,9 @@ class SettingsFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val pref = SettingPreferences.getInstance(requireActivity())
+        val viewModel: SettingsViewModel by viewModels()
 
-        val factory: ViewModelFactory = ViewModelFactory.getInstance(requireActivity(), pref)
-        val viewModel: SettingsViewModel by viewModels { factory }
-
-        viewModel.getThemeSettings().observe(this) { isDarkModeActive: Boolean ->
+        viewModel.getThemeSettings().observe(viewLifecycleOwner) { isDarkModeActive: Boolean ->
             binding.switchTheme.isChecked = isDarkModeActive
         }
 

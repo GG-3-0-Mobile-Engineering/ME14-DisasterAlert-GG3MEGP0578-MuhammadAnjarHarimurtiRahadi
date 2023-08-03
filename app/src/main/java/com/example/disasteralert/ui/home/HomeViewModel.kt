@@ -4,13 +4,17 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
-import com.example.disasteralert.data.DisasterRepository
 import com.example.disasteralert.data.local.entity.DisasterEntity
+import com.example.disasteralert.domain.repository.DisasterRepository
 import com.example.disasteralert.helper.SettingPreferences
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class HomeViewModel(
-    private val disasterRepository: DisasterRepository, private val pref: SettingPreferences
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val disasterRepository: DisasterRepository,
+    private val pref: SettingPreferences
 ) : ViewModel() {
 
     init {

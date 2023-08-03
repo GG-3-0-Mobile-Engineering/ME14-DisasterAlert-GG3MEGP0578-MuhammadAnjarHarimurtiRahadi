@@ -7,13 +7,15 @@ import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.data.local.room.DisasterDao
 import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesResponse
 import com.example.disasteralert.data.remote.service.DisasterAPI
+import com.example.disasteralert.domain.repository.DisasterRepository
 import com.example.disasteralert.helper.Util
+import javax.inject.Inject
 
-class DisasterRepository private constructor(
-    private val apiService: DisasterAPI, private val disasterDao: DisasterDao
-) {
-
-    suspend fun getApiDisasterData() {
+class DisasterRepositoryImpl @Inject constructor(
+    private val apiService: DisasterAPI,
+    private val disasterDao: DisasterDao
+) : DisasterRepository {
+    override suspend fun getApiDisasterData() {
         try {
             val response = apiService.getAllDisasterData()
             val responseList = response.result.objects.output.geometries
@@ -35,8 +37,9 @@ class DisasterRepository private constructor(
         }
     }
 
-    fun getPeriodicDisasterData(
-        startDate: String = "", endDate: String = ""
+    override fun getPeriodicDisasterData(
+        startDate: String,
+        endDate: String
     ): LiveData<Results<List<DisasterEntity>>> = liveData {
         emit(Results.Loading)
         try {
@@ -63,29 +66,18 @@ class DisasterRepository private constructor(
         }
     }
 
-    fun getAllDisasterData(): LiveData<List<DisasterEntity>> {
-        return disasterDao.getAllDisaster()
-    }
+    override fun getAllDisasterData(): LiveData<List<DisasterEntity>> = disasterDao.getAllDisaster()
 
-    fun getDataByLocation(
-        locFilter: String
-    ): LiveData<List<DisasterEntity>> {
-        return disasterDao.getDataByLocation(locFilter)
-    }
+    override fun getDataByLocation(locFilter: String): LiveData<List<DisasterEntity>> = disasterDao.getDataByLocation(locFilter)
 
-    fun getDataByDisaster(
+    override fun getDataByDisaster(disasterFilter: String): LiveData<List<DisasterEntity>> = disasterDao.getDataByDisaster(disasterFilter)
+
+    override fun getDataByLocationAndDisaster(
+        locFilter: String,
         disasterFilter: String
-    ): LiveData<List<DisasterEntity>> {
-        return disasterDao.getDataByDisaster(disasterFilter)
-    }
+    ): LiveData<List<DisasterEntity>> = disasterDao.getDataByLocationAndDisaster(locFilter, disasterFilter)
 
-    fun getDataByLocationAndDisaster(
-        locFilter: String, disasterFilter: String
-    ): LiveData<List<DisasterEntity>> {
-        return disasterDao.getDataByLocationAndDisaster(locFilter, disasterFilter)
-    }
-
-    fun getFloodGaugesData(): LiveData<Results<FloodGaugesResponse>> = liveData {
+    override fun getFloodGaugesData(): LiveData<Results<FloodGaugesResponse>> = liveData {
         emit(Results.Loading)
         try {
             val response = apiService.getFloodGaugesData()
@@ -96,13 +88,4 @@ class DisasterRepository private constructor(
         }
     }
 
-    companion object {
-        @Volatile
-        private var instance: DisasterRepository? = null
-        fun getInstance(
-            apiService: DisasterAPI, disasterDao: DisasterDao
-        ): DisasterRepository = instance ?: synchronized(this) {
-            instance ?: DisasterRepository(apiService, disasterDao)
-        }.also { instance = it }
-    }
 }

@@ -13,19 +13,19 @@ object DisasterServiceAPI {
 
     private const val BASE_URL = "https://data.petabencana.id/"
 
-    fun getApiService(): DisasterAPI {
-        val flipperOkhttpInterceptor = FlipperOkhttpInterceptor(MainActivity.networkFlipperPlugin, true)
-
-        val loggingInterceptor = if (BuildConfig.DEBUG) {
-            HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
-        } else {
-            HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.NONE)
-        }
-        val client = OkHttpClient.Builder().addInterceptor(loggingInterceptor).addInterceptor(flipperOkhttpInterceptor)
-            .build()
-        val retrofit =
-            Retrofit.Builder().baseUrl(BASE_URL).addConverterFactory(GsonConverterFactory.create())
-                .client(client).build()
-        return retrofit.create(DisasterAPI::class.java)
-    }
+//    fun getApiService(): DisasterAPI {
+//        val flipperOkhttpInterceptor = FlipperOkhttpInterceptor(MainActivity.networkFlipperPlugin, true)
+//
+//        val loggingInterceptor = if (BuildConfig.DEBUG) {
+//            HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
+//        } else {
+//            HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.NONE)
+//        }
+//        val client = OkHttpClient.Builder().addInterceptor(loggingInterceptor).addInterceptor(flipperOkhttpInterceptor)
+//            .build()
+//        val retrofit =
+//            Retrofit.Builder().baseUrl(BASE_URL).addConverterFactory(GsonConverterFactory.create())
+//                .client(client).build()
+//        return retrofit.create(DisasterAPI::class.java)
+//    }
 }

@@ -21,24 +21,20 @@ import com.facebook.flipper.plugins.inspector.DescriptorMapping
 import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin
 import com.facebook.flipper.plugins.network.NetworkFlipperPlugin
 import com.facebook.soloader.SoLoader
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var navController: NavController
 
-    private lateinit var settingsViewModel: SettingsViewModel
+    private val settingsViewModel: SettingsViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
-
-        val pref = SettingPreferences.getInstance(this)
-
-        val factory: ViewModelFactory = ViewModelFactory.getInstance(applicationContext, pref)
-        val viewModel: SettingsViewModel by viewModels { factory }
-        settingsViewModel = viewModel
 
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.nav_host_fragment) as NavHostFragment
         navController = navHostFragment.findNavController()
@@ -47,9 +43,6 @@ class MainActivity : AppCompatActivity() {
         checkPermission()
 
         setupActionBarWithNavController(navController)
-
-        if (BuildConfig.DEBUG)
-            initFlipper()
     }
 
     private fun checkTheme() {
@@ -72,27 +65,9 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private fun initFlipper() {
-        SoLoader.init(this, false)
 
-        val client = AndroidFlipperClient.getInstance(this.applicationContext).apply {
-            addPlugin(
-                InspectorFlipperPlugin(
-                    applicationContext,
-                    DescriptorMapping.withDefaults()
-                )
-            )
-            addPlugin(CrashReporterPlugin.getInstance())
-            addPlugin(networkFlipperPlugin)
-        }
-        client.start()
-    }
 
     override fun onSupportNavigateUp(): Boolean {
         return navController.navigateUp() || super.onSupportNavigateUp()
-    }
-
-    companion object {
-        val networkFlipperPlugin = NetworkFlipperPlugin()
     }
 }
