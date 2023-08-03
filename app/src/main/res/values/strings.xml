@@ -21,4 +21,5 @@
     <string name="disaster_haze">Haze</string>
     <string name="disaster_wind">Wind</string>
     <string name="disaster_volcano">volcano</string>
+    <string name="push_notification">Push Notification</string>
 </resources>

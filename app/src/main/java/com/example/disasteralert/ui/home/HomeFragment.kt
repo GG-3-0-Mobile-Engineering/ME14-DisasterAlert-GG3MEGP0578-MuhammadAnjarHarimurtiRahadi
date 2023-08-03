@@ -23,7 +23,6 @@ import com.example.disasteralert.helper.Util
 import com.example.disasteralert.helper.Util.getAreaCode
 import com.example.disasteralert.helper.Util.moveCameraAction
 import com.example.disasteralert.helper.Util.placeMarkerOnMap
-import com.example.disasteralert.helper.Util.setPeriodicWorkManager
 import com.google.android.gms.maps.GoogleMap
 import com.google.android.gms.maps.OnMapReadyCallback
 import com.google.android.gms.maps.SupportMapFragment
@@ -35,8 +34,6 @@ import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.CornerSize
 import com.google.android.material.shape.ShapeAppearanceModel
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 
 @AndroidEntryPoint
@@ -52,7 +49,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     private var latestFilter: String = ""
 
-    private lateinit var homeViewModel: HomeViewModel
+    private val homeViewModel: HomeViewModel by viewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?
@@ -67,9 +64,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         mapFragment =
             childFragmentManager.findFragmentById(R.id.maps_fragment) as SupportMapFragment
         mapFragment.getMapAsync(this)
-
-        val viewModel: HomeViewModel by viewModels ()
-        homeViewModel = viewModel
 
         binding.apply {
             btnSettings.setOnClickListener {
@@ -89,7 +83,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
         getDisasterData()
         getFilterData()
         setSearchLayout()
-        getFloodGaugesData()
         getDialogFilterData()
     }
 
@@ -305,35 +298,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 if (data?.isEmpty() == true) {
                     tvNoData.visibility = View.VISIBLE
                     rvDisasterList.visibility = View.GONE
-                }
-            }
-        }
-    }
-
-    private fun getFloodGaugesData() {
-        homeViewModel.getFloodGaugesData().observe(viewLifecycleOwner) { floodGauges ->
-            if (floodGauges != null) {
-                when (floodGauges) {
-                    is Results.Loading -> {
-                        showLoading(true)
-                    }
-                    is Results.Success -> {
-                        showLoading(false)
-                        val floodGaugesData =
-                            floodGauges.data.floodGaugesResult.objects.output.geometries
-
-                        if (floodGaugesData.isNotEmpty()) {
-                            for (element in floodGaugesData) {
-                                lifecycleScope.launch {
-                                    setPeriodicWorkManager(requireActivity(), element)
-                                    delay(5000L)
-                                }
-                            }
-                        }
-                    }
-                    is Results.Error -> {
-                        showLoading(false)
-                    }
                 }
             }
         }

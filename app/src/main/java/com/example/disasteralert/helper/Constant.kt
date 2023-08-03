@@ -6,15 +6,6 @@ object Constant {
     const val ARG_DATE_START = "DateStart"
     const val ARG_DATE_END = "DateEnd"
 
-    val FILTER_TYPE = listOf(
-        "Flood",
-        "Earthquake",
-        "Fire",
-        "Haze",
-        "Wind",
-        "Volcano"
-    )
-
     val AREA = mapOf(
         "ID-AC" to "Aceh",
         "ID-BA" to "Bali",

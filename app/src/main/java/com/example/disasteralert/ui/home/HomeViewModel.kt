@@ -47,8 +47,6 @@ class HomeViewModel @Inject constructor(
         } else disasterRepository.getAllDisasterData()
     }
 
-    fun getFloodGaugesData() = disasterRepository.getFloodGaugesData()
-
     fun getThemeSettings(): LiveData<Boolean> {
         return pref.getThemeSetting().asLiveData()
     }

@@ -95,7 +95,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/remove_filter" />
+                android:text="@string/remove_filter"
+                android:enabled="false"/>
 
             <Button
                 android:id="@+id/btn_apply"

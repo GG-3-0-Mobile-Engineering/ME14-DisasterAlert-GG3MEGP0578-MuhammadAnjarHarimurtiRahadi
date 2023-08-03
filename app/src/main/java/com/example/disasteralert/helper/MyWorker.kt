@@ -13,7 +13,8 @@ class MyWorker(context: Context, workerParams: WorkerParameters) : Worker(contex
 
     companion object {
         val EXTRA_NAME = "data"
-        val EXTRA_OBS = "obs"
+        val EXTRA_OBS3 = "obs3"
+        val EXTRA_OBS4 = "obs4"
         const val NOTIFICATION_ID = 1
         const val CHANNEL_ID = "channel_01"
         const val CHANNEL_NAME = "disaster alert"
@@ -21,8 +22,10 @@ class MyWorker(context: Context, workerParams: WorkerParameters) : Worker(contex
 
     override fun doWork(): Result {
         val dataName = inputData.getString(EXTRA_NAME)
-        val dataObs = inputData.getString(EXTRA_OBS)
-        showNotification(dataName.toString(), dataObs.toString())
+        val dataObs3 = inputData.getInt(EXTRA_OBS3, 1)
+        val dataObs4 = inputData.getString(EXTRA_OBS4)
+        if (dataObs3 >= 3)
+            showNotification(dataName.toString(), dataObs4.toString())
         return Result.success()
     }
 

@@ -12,8 +12,14 @@ import com.google.android.gms.maps.model.MarkerOptions
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 object Util {
+
+    private lateinit var workManager: WorkManager
+    private lateinit var periodicWorkRequest: PeriodicWorkRequest
+
+    const val WORKER_TAG = "my_notif_worker"
 
     fun getDateApiFormat(date: String): String {
         return date + "T00:00:00+0700"
@@ -56,21 +62,29 @@ object Util {
         moveCameraAction(mMap = mMap, builder = builder, location = null)
     }
 
-    fun setPeriodicWorkManager(context: Context, floodGaugesItem: FloodGaugesGeometriesItem) {
+    fun setWorkManager(context: Context) {
+        workManager = WorkManager.getInstance(context)
+    }
+
+    fun setPeriodicWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
         val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
         val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-        val workManager: WorkManager = WorkManager.getInstance(context)
-        val data = Data.Builder().putString(
-            MyWorker.EXTRA_NAME, gaugeName
-        ).putString(MyWorker.EXTRA_OBS, observation.f4).build()
+        val data = Data.Builder()
+            .putString(MyWorker.EXTRA_NAME, gaugeName)
+            .putInt(MyWorker.EXTRA_OBS3, observation.f3)
+            .putString(MyWorker.EXTRA_OBS4, observation.f4)
+            .build()
         val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
-        if (observation.f3 >= 3) {
-            val periodicWorkRequest: PeriodicWorkRequest = PeriodicWorkRequest.Builder(
-                MyWorker::class.java, 60, TimeUnit.MINUTES
-            ).setInputData(data).setConstraints(constraints).build()
-            workManager.enqueue(periodicWorkRequest)
-        }
+
+        periodicWorkRequest = PeriodicWorkRequest.Builder(
+            MyWorker::class.java, 60, TimeUnit.MINUTES
+        ).setInputData(data).setConstraints(constraints).build()
+        workManager.enqueueUniquePeriodicWork(WORKER_TAG, ExistingPeriodicWorkPolicy.KEEP, periodicWorkRequest)
+    }
+
+    fun cancelWorkManager() {
+        workManager.cancelUniqueWork(WORKER_TAG)
     }
 
     fun getAreaCode(selectedItem: String): String {

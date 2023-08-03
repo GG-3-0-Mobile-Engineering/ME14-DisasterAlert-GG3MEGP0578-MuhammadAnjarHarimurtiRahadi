@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.preferencesDataStoreFile
 import androidx.room.Room
+import androidx.work.WorkManager
 import com.example.disasteralert.BuildConfig
 import com.example.disasteralert.data.DisasterRepositoryImpl
 import com.example.disasteralert.data.local.room.DisasterDao
@@ -31,6 +32,12 @@ import javax.inject.Singleton
 object MyModule {
 
     const val BASE_URL = "https://data.petabencana.id/"
+
+    @Singleton
+    @Provides
+    fun provideContext(@ApplicationContext appContext: Context): Context {
+        return appContext
+    }
 
     @Singleton
     @Provides
@@ -88,7 +95,7 @@ object MyModule {
 
     @Provides
     @Singleton
-    fun provideRoomDb(@ApplicationContext context: Context): DisasterDatabase = Room.databaseBuilder(
+    fun provideRoomDb(context: Context): DisasterDatabase = Room.databaseBuilder(
         context,
         DisasterDatabase::class.java, "Disaster.db"
     ).build()
@@ -105,9 +112,15 @@ object MyModule {
 
     @Provides
     @Singleton
-    fun provideDataStore(@ApplicationContext context: Context) : DataStore<Preferences> {
+    fun provideDataStore(context: Context) : DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
             produceFile = { context.preferencesDataStoreFile("settings") }
         )
+    }
+
+    @Provides
+    @Singleton
+    fun provideWorkManager(context: Context) : WorkManager {
+        return WorkManager.getInstance(context)
     }
 }

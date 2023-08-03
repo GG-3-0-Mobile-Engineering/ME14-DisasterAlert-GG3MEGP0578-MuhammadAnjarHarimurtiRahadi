@@ -16,6 +16,7 @@ class SettingPreferences @Inject constructor(
 ) {
 
     private val _THEMEKEY = booleanPreferencesKey("theme_setting")
+    private val _NOTIFICATIONKEY = booleanPreferencesKey("notification_setting")
 
     fun getThemeSetting(): Flow<Boolean> {
         return dataStore.data.map { preferences ->
@@ -26,6 +27,18 @@ class SettingPreferences @Inject constructor(
     suspend fun saveThemeSetting(isDarkModeActive: Boolean) {
         dataStore.edit { preferences ->
             preferences[_THEMEKEY] = isDarkModeActive
+        }
+    }
+
+    fun getNotificationSetting(): Flow<Boolean> {
+        return dataStore.data.map { preferences ->
+            preferences[_NOTIFICATIONKEY] ?: false
+        }
+    }
+
+    suspend fun saveNotificationSetting(isNotificationActive: Boolean) {
+        dataStore.edit { preferences ->
+            preferences[_NOTIFICATIONKEY] = isNotificationActive
         }
     }
 }
