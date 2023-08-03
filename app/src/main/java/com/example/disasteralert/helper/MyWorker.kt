@@ -21,21 +21,24 @@ class MyWorker(context: Context, workerParams: WorkerParameters) : Worker(contex
     }
 
     override fun doWork(): Result {
-        val dataName = inputData.getString(EXTRA_NAME)
+        val dataName = inputData.getString(EXTRA_NAME).toString()
         val dataObs3 = inputData.getInt(EXTRA_OBS3, 1)
-        val dataObs4 = inputData.getString(EXTRA_OBS4)
+        val dataObs4 = inputData.getString(EXTRA_OBS4).toString()
+
+        val title = "Emergency Alert"
+        val subTitle = "The flood warning in the $dataName area is already on $dataObs4"
         if (dataObs3 >= 3)
-            showNotification(dataName.toString(), dataObs4.toString())
+            showNotification(title, subTitle)
         return Result.success()
     }
 
-    private fun showNotification(dataName: String, dataObs: String) {
+    private fun showNotification(title: String, subTitle: String) {
         val notificationManager =
             applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification: NotificationCompat.Builder =
             NotificationCompat.Builder(applicationContext, CHANNEL_ID)
-                .setSmallIcon(R.drawable.baseline_notifications_24).setContentTitle(dataName)
-                .setContentText(dataObs).setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setSmallIcon(R.drawable.baseline_notifications_24).setContentTitle(title)
+                .setContentText(subTitle).setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setDefaults(NotificationCompat.DEFAULT_ALL)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel =
