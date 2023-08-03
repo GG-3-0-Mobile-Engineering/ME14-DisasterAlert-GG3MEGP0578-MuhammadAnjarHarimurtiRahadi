@@ -17,6 +17,10 @@ class HomeViewModel @Inject constructor(
     private val pref: SettingPreferences
 ) : ViewModel() {
 
+    private var isFilter: Boolean = false
+    private var startDateFilter: String = ""
+    private var endDateFilter: String = ""
+
     init {
         getApiDisasterData()
     }
@@ -48,4 +52,19 @@ class HomeViewModel @Inject constructor(
     fun getThemeSettings(): LiveData<Boolean> {
         return pref.getThemeSetting().asLiveData()
     }
+
+    fun setFilterStatus(isFilter: Boolean) {
+        this.isFilter = isFilter
+    }
+
+    fun getFilterStatus(): Boolean = isFilter
+
+    fun setDateStatus(startDate: String, endDate: String) {
+        this.startDateFilter = startDate
+        this.endDateFilter = endDate
+    }
+
+    fun getStartDate(): String = startDateFilter
+
+    fun getEndDate(): String = endDateFilter
 }

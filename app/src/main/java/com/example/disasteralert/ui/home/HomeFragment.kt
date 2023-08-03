@@ -96,7 +96,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
     private fun getDialogFilterData() {
         filterDialogListener = object : FilterFragment.OnFilterDialogListener {
             override fun onFilterChosen(startDate: String, endDate: String) {
-                if (startDate.isNotEmpty() || endDate.isNotEmpty()) {
+                if (startDate.isNotEmpty() && endDate.isNotEmpty()) {
                     binding.btnFilter.setImageDrawable(
                         ContextCompat.getDrawable(
                             binding.btnFilter.context, R.drawable.baseline_filter_alt_off_24

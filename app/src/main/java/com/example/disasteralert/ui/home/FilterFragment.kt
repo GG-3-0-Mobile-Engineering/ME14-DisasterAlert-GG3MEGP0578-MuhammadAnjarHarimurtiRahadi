@@ -9,20 +9,25 @@ import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.DialogFragment
+import androidx.fragment.app.activityViewModels
+import androidx.fragment.app.viewModels
 import com.example.disasteralert.R
 import com.example.disasteralert.databinding.FragmentFilterBinding
 import com.example.disasteralert.helper.Constant
 import com.example.disasteralert.helper.DatePickerFragment
+import dagger.hilt.android.AndroidEntryPoint
 import java.text.SimpleDateFormat
 import java.util.*
 
-
+@AndroidEntryPoint
 class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragment.DialogDateListener {
 
     private var _binding: FragmentFilterBinding? = null
     private val binding get() = _binding!!
 
     private var filterDialogListener: OnFilterDialogListener? = null
+
+    private val homeViewModel: HomeViewModel by activityViewModels()
 
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -36,6 +41,10 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
         super.onViewCreated(view, savedInstanceState)
 
         binding.apply {
+            btnRemove.isEnabled = homeViewModel.getFilterStatus()
+            tvStartDate.text = homeViewModel.getStartDate()
+            tvEndDate.text = homeViewModel.getEndDate()
+
             btnStartDate.setOnClickListener(this@FilterFragment)
             btnEndDate.setOnClickListener(this@FilterFragment)
             btnRemove.setOnClickListener(this@FilterFragment)
@@ -77,13 +86,24 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
             }
             R.id.btn_remove -> {
                 filterDialogListener?.onFilterChosen("", "")
+                homeViewModel.setFilterStatus(false)
+                homeViewModel.setDateStatus("", "")
                 dialog?.dismiss()
             }
             R.id.btn_apply -> {
                 val startDate = binding.tvStartDate.text.toString()
                 val endDate = binding.tvEndDate.text.toString()
 
-                filterDialogListener?.onFilterChosen(startDate, endDate)
+                if (startDate.isNotEmpty() && endDate.isNotEmpty()) {
+                    filterDialogListener?.onFilterChosen(startDate, endDate)
+                    homeViewModel.setFilterStatus(true)
+                    homeViewModel.setDateStatus(startDate, endDate)
+                }
+                else {
+                    filterDialogListener?.onFilterChosen("", "")
+                    homeViewModel.setFilterStatus(false)
+                    homeViewModel.setDateStatus("", "")
+                }
                 dialog?.dismiss()
             }
             R.id.btn_cancel -> dialog?.cancel()
