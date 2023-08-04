@@ -3,6 +3,7 @@ package com.example.disasteralert.domain.repository
 import androidx.lifecycle.LiveData
 import com.example.disasteralert.data.Results
 import com.example.disasteralert.data.local.entity.DisasterEntity
+import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesResponse
 
 interface DisasterRepository {
@@ -19,5 +20,5 @@ interface DisasterRepository {
 
     fun getDataByLocationAndDisaster(locFilter: String, disasterFilter: String): LiveData<List<DisasterEntity>>
 
-    fun getFloodGaugesData(): LiveData<Results<FloodGaugesResponse>>
+    suspend fun getFloodGaugesData(): Results<List<FloodGaugesGeometriesItem>>
 }

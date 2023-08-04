@@ -66,21 +66,23 @@ object Util {
         workManager = WorkManager.getInstance(context)
     }
 
-    fun setPeriodicWorkManager(floodGaugesItem: FloodGaugesGeometriesItem) {
-        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
-        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-        val data = Data.Builder()
-            .putString(MyWorker.EXTRA_NAME, gaugeName)
-            .putInt(MyWorker.EXTRA_OBS3, observation.f3)
-            .putString(MyWorker.EXTRA_OBS4, observation.f4)
-            .build()
+    fun setPeriodicWorkManager() {
+//        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
+//        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
+//        val data = Data.Builder()
+//            .putString(MyWorker.EXTRA_NAME, gaugeName)
+//            .putInt(MyWorker.EXTRA_OBS3, observation.f3)
+//            .putString(MyWorker.EXTRA_OBS4, observation.f4)
+//            .build()
         val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
-        periodicWorkRequest = PeriodicWorkRequest.Builder(
-            MyWorker::class.java, 60, TimeUnit.MINUTES
-        ).setInputData(data).setConstraints(constraints).build()
-        workManager.enqueueUniquePeriodicWork(WORKER_TAG, ExistingPeriodicWorkPolicy.KEEP, periodicWorkRequest)
+        periodicWorkRequest =
+            PeriodicWorkRequest.Builder(MyWorker::class.java, 60, TimeUnit.MINUTES)
+                .setConstraints(constraints).addTag(WORKER_TAG).build()
+        workManager.enqueueUniquePeriodicWork(
+            WORKER_TAG, ExistingPeriodicWorkPolicy.KEEP, periodicWorkRequest
+        )
     }
 
     fun cancelWorkManager() {
@@ -88,8 +90,7 @@ object Util {
     }
 
     fun getAreaCode(selectedItem: String): String {
-        return if (selectedItem.isNotBlank())
-            Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
+        return if (selectedItem.isNotBlank()) Constant.AREA.entries.find { it.value == selectedItem }?.key.toString()
         else ""
     }
 }

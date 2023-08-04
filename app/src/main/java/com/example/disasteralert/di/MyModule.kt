@@ -13,6 +13,7 @@ import com.example.disasteralert.data.local.room.DisasterDao
 import com.example.disasteralert.data.local.room.DisasterDatabase
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.domain.repository.DisasterRepository
+import com.example.disasteralert.helper.Constant
 import com.facebook.flipper.plugins.network.FlipperOkhttpInterceptor
 import com.facebook.flipper.plugins.network.NetworkFlipperPlugin
 import dagger.Module
@@ -30,14 +31,6 @@ import javax.inject.Singleton
 @Module
 @InstallIn(SingletonComponent::class)
 object MyModule {
-
-    const val BASE_URL = "https://data.petabencana.id/"
-
-    @Singleton
-    @Provides
-    fun provideContext(@ApplicationContext appContext: Context): Context {
-        return appContext
-    }
 
     @Singleton
     @Provides
@@ -82,7 +75,7 @@ object MyModule {
     fun provideRetrofit(
         okHttpClient: OkHttpClient
     ): Retrofit = Retrofit.Builder()
-        .baseUrl(BASE_URL)
+        .baseUrl(Constant.BASE_URL)
         .addConverterFactory(GsonConverterFactory.create())
         .client(okHttpClient)
         .build()
@@ -95,7 +88,7 @@ object MyModule {
 
     @Provides
     @Singleton
-    fun provideRoomDb(context: Context): DisasterDatabase = Room.databaseBuilder(
+    fun provideRoomDb(@ApplicationContext context: Context): DisasterDatabase = Room.databaseBuilder(
         context,
         DisasterDatabase::class.java, "Disaster.db"
     ).build()
@@ -112,15 +105,9 @@ object MyModule {
 
     @Provides
     @Singleton
-    fun provideDataStore(context: Context) : DataStore<Preferences> {
+    fun provideDataStore(@ApplicationContext context: Context) : DataStore<Preferences> {
         return PreferenceDataStoreFactory.create(
             produceFile = { context.preferencesDataStoreFile("settings") }
         )
-    }
-
-    @Provides
-    @Singleton
-    fun provideWorkManager(context: Context) : WorkManager {
-        return WorkManager.getInstance(context)
     }
 }

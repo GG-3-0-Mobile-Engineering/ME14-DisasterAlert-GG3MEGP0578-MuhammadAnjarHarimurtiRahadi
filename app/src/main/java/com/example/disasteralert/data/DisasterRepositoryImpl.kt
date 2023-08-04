@@ -5,6 +5,7 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.liveData
 import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.data.local.room.DisasterDao
+import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesResponse
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.domain.repository.DisasterRepository
@@ -77,14 +78,15 @@ class DisasterRepositoryImpl @Inject constructor(
         disasterFilter: String
     ): LiveData<List<DisasterEntity>> = disasterDao.getDataByLocationAndDisaster(locFilter, disasterFilter)
 
-    override fun getFloodGaugesData(): LiveData<Results<FloodGaugesResponse>> = liveData {
-        emit(Results.Loading)
-        try {
+    override suspend fun getFloodGaugesData() : Results<List<FloodGaugesGeometriesItem>> {
+        return try {
             val response = apiService.getFloodGaugesData()
-            emit(Results.Success(response))
+            val floodGaugesObsData = response.floodGaugesResult.objects.output.geometries
+
+            Results.Success(floodGaugesObsData)
 
         } catch (e: Exception) {
-            emit(Results.Error(e.message.toString()))
+            Results.Error(e.message.toString())
         }
     }
 

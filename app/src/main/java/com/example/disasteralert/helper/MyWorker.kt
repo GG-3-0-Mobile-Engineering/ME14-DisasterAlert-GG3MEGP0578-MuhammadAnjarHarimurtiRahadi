@@ -5,31 +5,53 @@ import android.app.NotificationManager
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.work.Worker
+import androidx.hilt.work.HiltWorker
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.example.disasteralert.R
+import com.example.disasteralert.data.Results
+import com.example.disasteralert.domain.repository.DisasterRepository
+import com.example.disasteralert.helper.Constant.CHANNEL_ID
+import com.example.disasteralert.helper.Constant.CHANNEL_NAME
+import com.example.disasteralert.helper.Constant.NOTIFICATION_ID
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 
-class MyWorker(context: Context, workerParams: WorkerParameters) : Worker(context, workerParams) {
+@HiltWorker
+class MyWorker @AssistedInject constructor(
+    @Assisted private val context: Context,
+    @Assisted private val workerParams: WorkerParameters,
+    private val repository: DisasterRepository
+) : CoroutineWorker(context, workerParams) {
 
-    companion object {
-        val EXTRA_NAME = "data"
-        val EXTRA_OBS3 = "obs3"
-        val EXTRA_OBS4 = "obs4"
-        const val NOTIFICATION_ID = 1
-        const val CHANNEL_ID = "channel_01"
-        const val CHANNEL_NAME = "disaster alert"
+    override suspend fun doWork(): Result {
+        getFloodGaugesData()
+        return Result.success()
     }
 
-    override fun doWork(): Result {
-        val dataName = inputData.getString(EXTRA_NAME).toString()
-        val dataObs3 = inputData.getInt(EXTRA_OBS3, 1)
-        val dataObs4 = inputData.getString(EXTRA_OBS4).toString()
+    private suspend fun getFloodGaugesData() {
+        when (val floodGauges = repository.getFloodGaugesData()) {
+            is Results.Success -> {
+                val floodGaugesData = floodGauges.data
+                var gaugesName = ""
+                var observation = ""
 
-        val title = "Emergency Alert"
-        val subTitle = "The flood warning in the $dataName area is already on $dataObs4"
-        if (dataObs3 >= 3)
-            showNotification(title, subTitle)
-        return Result.success()
+                for (floodGaugesItem in floodGaugesData) {
+                    val gaugesProperties = floodGaugesItem.floodGaugesProperties
+                    if (gaugesProperties.observations.last().f3 >= 3) {
+                        gaugesName = gaugesProperties.gaugenameid
+                        observation = gaugesProperties.observations.last().f4
+                    }
+                }
+
+                if (gaugesName.isNotEmpty() && observation.isNotEmpty()) {
+                    val title = "Emergency Alert"
+                    val subTitle = "The flood warning in the $gaugesName area is already on $observation"
+                    showNotification(title, subTitle)
+                }
+            }
+            else -> {}
+        }
     }
 
     private fun showNotification(title: String, subTitle: String) {

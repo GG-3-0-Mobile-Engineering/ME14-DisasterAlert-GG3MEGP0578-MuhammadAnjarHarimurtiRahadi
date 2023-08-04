@@ -36,5 +36,5 @@ class SettingsViewModel @Inject constructor(
         }
     }
 
-    fun getFloodGaugesData() = disasterRepository.getFloodGaugesData()
+//    fun getFloodGaugesData() = disasterRepository.getFloodGaugesData()
 }

@@ -1,6 +1,8 @@
 package com.example.disasteralert
 
 import android.app.Application
+import androidx.hilt.work.HiltWorkerFactory
+import androidx.work.Configuration
 import com.facebook.flipper.android.AndroidFlipperClient
 import com.facebook.flipper.plugins.crashreporter.CrashReporterPlugin
 import com.facebook.flipper.plugins.inspector.DescriptorMapping
@@ -11,15 +13,17 @@ import dagger.hilt.android.HiltAndroidApp
 import javax.inject.Inject
 
 @HiltAndroidApp
-class DisasterApp: Application() {
+class DisasterApp : Application(), Configuration.Provider {
 
     @Inject
-    lateinit var networkFlipperPlugin : NetworkFlipperPlugin
+    lateinit var workerFactory: HiltWorkerFactory
+
+    @Inject
+    lateinit var networkFlipperPlugin: NetworkFlipperPlugin
 
     override fun onCreate() {
         super.onCreate()
-        if (BuildConfig.DEBUG)
-            initFlipper()
+        if (BuildConfig.DEBUG) initFlipper()
     }
 
     private fun initFlipper() {
@@ -28,8 +32,7 @@ class DisasterApp: Application() {
         val client = AndroidFlipperClient.getInstance(this.applicationContext).apply {
             addPlugin(
                 InspectorFlipperPlugin(
-                    applicationContext,
-                    DescriptorMapping.withDefaults()
+                    applicationContext, DescriptorMapping.withDefaults()
                 )
             )
             addPlugin(CrashReporterPlugin.getInstance())
@@ -37,4 +40,8 @@ class DisasterApp: Application() {
         }
         client.start()
     }
+
+    override fun getWorkManagerConfiguration(): Configuration =
+        Configuration.Builder().setWorkerFactory(workerFactory).build()
+
 }

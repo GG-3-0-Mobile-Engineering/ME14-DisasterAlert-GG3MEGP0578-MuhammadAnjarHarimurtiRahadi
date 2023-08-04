@@ -6,6 +6,12 @@ object Constant {
     const val ARG_DATE_START = "DateStart"
     const val ARG_DATE_END = "DateEnd"
 
+    const val BASE_URL = "https://data.petabencana.id/"
+
+    const val NOTIFICATION_ID = 1
+    const val CHANNEL_ID = "channel_01"
+    const val CHANNEL_NAME = "disaster alert"
+
     val AREA = mapOf(
         "ID-AC" to "Aceh",
         "ID-BA" to "Bali",
