@@ -2,19 +2,24 @@ package com.example.disasteralert.data
 
 import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.asLiveData
 import androidx.lifecycle.liveData
+import androidx.lifecycle.viewModelScope
 import com.example.disasteralert.data.local.entity.DisasterEntity
 import com.example.disasteralert.data.local.room.DisasterDao
 import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesGeometriesItem
 import com.example.disasteralert.data.remote.response.floodgaugesresponse.FloodGaugesResponse
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.domain.repository.DisasterRepository
+import com.example.disasteralert.helper.SettingPreferences
 import com.example.disasteralert.helper.Util
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 class DisasterRepositoryImpl @Inject constructor(
     private val apiService: DisasterAPI,
-    private val disasterDao: DisasterDao
+    private val disasterDao: DisasterDao,
+    private val pref: SettingPreferences
 ) : DisasterRepository {
     override suspend fun getApiDisasterData() {
         try {
@@ -88,6 +93,22 @@ class DisasterRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             Results.Error(e.message.toString())
         }
+    }
+
+    override fun getThemeSettings(): LiveData<Boolean> {
+        return pref.getThemeSetting().asLiveData()
+    }
+
+    override suspend fun saveThemeSetting(isDarkModeActive: Boolean) {
+        pref.saveThemeSetting(isDarkModeActive)
+    }
+
+    override fun getNotificationSettings(): LiveData<Boolean> {
+        return pref.getNotificationSetting().asLiveData()
+    }
+
+    override suspend fun saveNotificationSetting(isNotificationActive: Boolean) {
+        pref.saveNotificationSetting(isNotificationActive)
     }
 
 }

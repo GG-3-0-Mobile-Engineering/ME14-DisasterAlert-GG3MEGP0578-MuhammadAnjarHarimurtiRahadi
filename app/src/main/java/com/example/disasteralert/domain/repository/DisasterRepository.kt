@@ -21,4 +21,12 @@ interface DisasterRepository {
     fun getDataByLocationAndDisaster(locFilter: String, disasterFilter: String): LiveData<List<DisasterEntity>>
 
     suspend fun getFloodGaugesData(): Results<List<FloodGaugesGeometriesItem>>
+
+    fun getThemeSettings(): LiveData<Boolean>
+
+    suspend fun saveThemeSetting(isDarkModeActive: Boolean)
+
+    fun getNotificationSettings(): LiveData<Boolean>
+
+    suspend fun saveNotificationSetting(isNotificationActive: Boolean)
 }

@@ -13,7 +13,10 @@ import com.example.disasteralert.data.local.room.DisasterDao
 import com.example.disasteralert.data.local.room.DisasterDatabase
 import com.example.disasteralert.data.remote.service.DisasterAPI
 import com.example.disasteralert.domain.repository.DisasterRepository
+import com.example.disasteralert.domain.usecase.DisasterInteractor
+import com.example.disasteralert.domain.usecase.DisasterUseCase
 import com.example.disasteralert.helper.Constant
+import com.example.disasteralert.helper.SettingPreferences
 import com.facebook.flipper.plugins.network.FlipperOkhttpInterceptor
 import com.facebook.flipper.plugins.network.NetworkFlipperPlugin
 import dagger.Module
@@ -54,15 +57,14 @@ object MyModule {
 
     @Provides
     @Singleton
-    fun provideNetworkFlipperPlugin() : NetworkFlipperPlugin = NetworkFlipperPlugin()
+    fun provideNetworkFlipperPlugin(): NetworkFlipperPlugin = NetworkFlipperPlugin()
 
     @Provides
     @Singleton
     fun provideOkHttpClient(
-        loggingInterceptor: Interceptor,
-        flipperInterceptor: FlipperOkhttpInterceptor
-    ):OkHttpClient {
-        val okHttpBuilder =  OkHttpClient.Builder()
+        loggingInterceptor: Interceptor, flipperInterceptor: FlipperOkhttpInterceptor
+    ): OkHttpClient {
+        val okHttpBuilder = OkHttpClient.Builder()
         okHttpBuilder.apply {
             addInterceptor(loggingInterceptor)
             addInterceptor(flipperInterceptor)
@@ -74,40 +76,44 @@ object MyModule {
     @Singleton
     fun provideRetrofit(
         okHttpClient: OkHttpClient
-    ): Retrofit = Retrofit.Builder()
-        .baseUrl(Constant.BASE_URL)
-        .addConverterFactory(GsonConverterFactory.create())
-        .client(okHttpClient)
-        .build()
+    ): Retrofit = Retrofit.Builder().baseUrl(Constant.BASE_URL)
+        .addConverterFactory(GsonConverterFactory.create()).client(okHttpClient).build()
 
     @Provides
     @Singleton
-    fun provideDisasterApi(retrofit: Retrofit) : DisasterAPI {
+    fun provideDisasterApi(retrofit: Retrofit): DisasterAPI {
         return retrofit.create(DisasterAPI::class.java)
     }
 
     @Provides
     @Singleton
-    fun provideRoomDb(@ApplicationContext context: Context): DisasterDatabase = Room.databaseBuilder(
-        context,
-        DisasterDatabase::class.java, "Disaster.db"
-    ).build()
+    fun provideRoomDb(@ApplicationContext context: Context): DisasterDatabase =
+        Room.databaseBuilder(
+            context, DisasterDatabase::class.java, "Disaster.db"
+        ).build()
 
     @Provides
     @Singleton
-    fun provideRoomDao(disasterDatabase: DisasterDatabase): DisasterDao = disasterDatabase.disasterDao()
+    fun provideRoomDao(disasterDatabase: DisasterDatabase): DisasterDao =
+        disasterDatabase.disasterDao()
 
     @Provides
     @Singleton
-    fun provideRepository(disasterAPI: DisasterAPI, disasterDao: DisasterDao) : DisasterRepository {
-        return DisasterRepositoryImpl(disasterAPI, disasterDao)
+    fun provideRepository(
+        disasterAPI: DisasterAPI, disasterDao: DisasterDao, pref: SettingPreferences
+    ): DisasterRepository {
+        return DisasterRepositoryImpl(disasterAPI, disasterDao, pref)
     }
 
     @Provides
     @Singleton
-    fun provideDataStore(@ApplicationContext context: Context) : DataStore<Preferences> {
-        return PreferenceDataStoreFactory.create(
-            produceFile = { context.preferencesDataStoreFile("settings") }
-        )
+    fun provideUseCase(disasterRepository: DisasterRepository): DisasterUseCase {
+        return DisasterInteractor(disasterRepository)
+    }
+
+    @Provides
+    @Singleton
+    fun provideDataStore(@ApplicationContext context: Context): DataStore<Preferences> {
+        return PreferenceDataStoreFactory.create(produceFile = { context.preferencesDataStoreFile("settings") })
     }
 }

@@ -47,8 +47,6 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
 
     lateinit var filterDialogListener: FilterFragment.OnFilterDialogListener
 
-    private var latestFilter: String = ""
-
     private val homeViewModel: HomeViewModel by viewModels()
 
     override fun onCreateView(
@@ -172,6 +170,7 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
             override fun onQueryTextChange(newText: String): Boolean {
                 if (newText.isEmpty()) {
                     binding.cvSuggestion.visibility = View.GONE
+                    val latestFilter = homeViewModel.getCurrentFilter()
                     if (latestFilter.isNotEmpty()) getDisasterData(disasterFilter = latestFilter)
                     else getDisasterData()
                 } else if (newText.length >= 3) {
@@ -184,8 +183,8 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                             binding.svSearchLocation.setQuery(selectedItem, true)
                             binding.cvSuggestion.visibility = View.GONE
                             val areaKey = getAreaCode(selectedItem)
-                            if (latestFilter.isNotEmpty()) getDisasterData(
-                                locFilter = areaKey, disasterFilter = latestFilter
+                            if (homeViewModel.getCurrentFilter().isNotEmpty()) getDisasterData(
+                                locFilter = areaKey, disasterFilter = homeViewModel.getCurrentFilter()
                             )
                             else getDisasterData(locFilter = areaKey)
 
@@ -270,13 +269,13 @@ class HomeFragment : Fragment(), OnMapReadyCallback, GoogleMap.OnMarkerClickList
                 val selectedFilter: String =
                     chipGroup.findViewById<Chip>(checkedIds.first()).text.toString().lowercase()
 
-                this.latestFilter = selectedFilter
+                homeViewModel.setCurrentFilter(selectedFilter)
                 if (searchLocQuery.isNotEmpty()) getDisasterData(
                     locFilter = searchLocQuery, disasterFilter = selectedFilter
                 )
                 else getDisasterData(disasterFilter = selectedFilter)
             } else {
-                this.latestFilter = ""
+                homeViewModel.setCurrentFilter("")
                 if (searchLocQuery.isNotEmpty()) getDisasterData(locFilter = searchLocQuery) else getDisasterData()
             }
         }
