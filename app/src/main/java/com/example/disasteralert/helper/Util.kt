@@ -67,13 +67,6 @@ object Util {
     }
 
     fun setPeriodicWorkManager() {
-//        val gaugeName = floodGaugesItem.floodGaugesProperties.gaugenameid
-//        val observation = floodGaugesItem.floodGaugesProperties.observations.last()
-//        val data = Data.Builder()
-//            .putString(MyWorker.EXTRA_NAME, gaugeName)
-//            .putInt(MyWorker.EXTRA_OBS3, observation.f3)
-//            .putString(MyWorker.EXTRA_OBS4, observation.f4)
-//            .build()
         val constraints =
             Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build()
 
