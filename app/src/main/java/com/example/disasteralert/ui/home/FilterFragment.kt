@@ -41,9 +41,9 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
         super.onViewCreated(view, savedInstanceState)
 
         binding.apply {
-            btnRemove.isEnabled = homeViewModel.getFilterStatus()
-            tvStartDate.text = homeViewModel.getStartDate()
-            tvEndDate.text = homeViewModel.getEndDate()
+            btnRemove.isEnabled = homeViewModel.isFilter
+            tvStartDate.text = homeViewModel.startDateFilter
+            tvEndDate.text = homeViewModel.endDateFilter
 
             btnStartDate.setOnClickListener(this@FilterFragment)
             btnEndDate.setOnClickListener(this@FilterFragment)
@@ -86,8 +86,9 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
             }
             R.id.btn_remove -> {
                 filterDialogListener?.onFilterChosen("", "")
-                homeViewModel.setFilterStatus(false)
-                homeViewModel.setDateStatus("", "")
+                homeViewModel.isFilter = false
+                homeViewModel.startDateFilter = ""
+                homeViewModel.endDateFilter = ""
                 dialog?.dismiss()
             }
             R.id.btn_apply -> {
@@ -96,13 +97,15 @@ class FilterFragment : DialogFragment(), View.OnClickListener, DatePickerFragmen
 
                 if (startDate.isNotEmpty() && endDate.isNotEmpty()) {
                     filterDialogListener?.onFilterChosen(startDate, endDate)
-                    homeViewModel.setFilterStatus(true)
-                    homeViewModel.setDateStatus(startDate, endDate)
+                    homeViewModel.isFilter = true
+                    homeViewModel.startDateFilter = startDate
+                    homeViewModel.endDateFilter = endDate
                 }
                 else {
                     filterDialogListener?.onFilterChosen("", "")
-                    homeViewModel.setFilterStatus(false)
-                    homeViewModel.setDateStatus("", "")
+                    homeViewModel.isFilter = false
+                    homeViewModel.startDateFilter = ""
+                    homeViewModel.endDateFilter = ""
                 }
                 dialog?.dismiss()
             }
