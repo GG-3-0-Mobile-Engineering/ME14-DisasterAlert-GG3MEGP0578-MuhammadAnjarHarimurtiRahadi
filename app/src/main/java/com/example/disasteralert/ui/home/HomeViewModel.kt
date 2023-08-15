@@ -22,23 +22,18 @@ class HomeViewModel @Inject constructor(
     var startDateFilter: String = ""
     var endDateFilter: String = ""
 
-    init {
-        getApiDisasterData()
-    }
-
     fun getApiDisasterData() {
         viewModelScope.launch {
             disasterUseCase.getApiDisasterData()
         }
     }
 
-    fun getPeriodicDisasterData(
-        startDate: String = "", endDate: String = ""
-    ) = disasterUseCase.getPeriodicDisasterData(startDate, endDate)
+    fun getPeriodicDisasterData(startDate: String, endDate: String) =
+        disasterUseCase.getPeriodicDisasterData(startDate, endDate)
 
     fun getAllDisasterData(
         locFilter: String, disasterFilter: String
-    ): LiveData<List<DisasterEntity>> = disasterUseCase.getAllDisasterData(locFilter, disasterFilter)
+    ) = disasterUseCase.getAllDisasterData(locFilter, disasterFilter)
 
     fun getThemeSettings(): LiveData<Boolean> {
         return disasterUseCase.getThemeSettings()
