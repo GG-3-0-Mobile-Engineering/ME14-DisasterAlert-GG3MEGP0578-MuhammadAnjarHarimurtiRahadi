@@ -7,8 +7,4 @@ data class FloodGaugesResult(
 
     @field:SerializedName("objects")
 	val objects: FloodGaugesObjects,
-
-
-    @field:SerializedName("type")
-	val type: String,
 )

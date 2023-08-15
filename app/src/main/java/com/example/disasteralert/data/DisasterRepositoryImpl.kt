@@ -67,7 +67,6 @@ class DisasterRepositoryImpl @Inject constructor(
             disasterDao.deleteAllDisaster()
             disasterDao.insertDisaster(disasterData)
         } catch (e: Exception) {
-            Log.d("Repository", "getData: ${e.message.toString()} ")
             emit(Results.Error(e.message.toString()))
         }
     }

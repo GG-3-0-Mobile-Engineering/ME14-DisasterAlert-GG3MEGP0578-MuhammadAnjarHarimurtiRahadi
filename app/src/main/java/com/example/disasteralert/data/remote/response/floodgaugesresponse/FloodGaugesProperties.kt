@@ -9,7 +9,4 @@ data class FloodGaugesProperties(
 
 	@field:SerializedName("observations")
 	val observations: List<ObservationsItem>,
-
-	@field:SerializedName("gaugeid")
-	val gaugeid: String
 )
